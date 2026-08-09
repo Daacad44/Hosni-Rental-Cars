@@ -42,6 +42,7 @@ model Organization {
   vehicles  Vehicle[]
   customers Customer[]
   rateCards RateCard[]
+  reservations Reservation[]
 }
 
 model Branch {
@@ -289,4 +290,49 @@ model RateCard {
 
   @@index([organizationId, category, effectiveFrom])
   @@index([organizationId, vehicleId, effectiveFrom])
+}
+
+// ── Module 5: Reservations & availability ───────────────────────────────────
+
+enum ReservationStatus {
+  PENDING
+  CONFIRMED
+  CONVERTED
+  CANCELLED
+  NO_SHOW
+}
+
+model Reservation {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  branchId       String
+  customerId     String
+
+  // A reservation targets a category, with a specific vehicle assigned before
+  // pickup. vehicleId is null until assigned.
+  category  String
+  vehicleId String?
+
+  startAt DateTime
+  endAt   DateTime
+  status  ReservationStatus @default(PENDING)
+
+  // The quote is computed server-side and stored; the agreement inherits it.
+  // rateValues is the exact rate snapshot so a later rate-card edit never alters
+  // this reservation. quoteBreakdown is the full line-by-line breakdown.
+  quotedTotal    Decimal @db.Decimal(12, 2)
+  quotedDeposit  Decimal @db.Decimal(12, 2)
+  rateValues     Json
+  quoteBreakdown Json
+
+  createdById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([organizationId])
+  @@index([organizationId, branchId])
+  @@index([organizationId, status])
+  @@index([vehicleId, startAt, endAt])
+  @@index([customerId])
 }
