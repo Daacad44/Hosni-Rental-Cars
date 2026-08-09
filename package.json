@@ -1,0 +1,22 @@
+{
+  "name": "hosni-rental-cars",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Car rental management system for a multi-branch rental company",
+  "workspaces": [
+    "packages/shared",
+    "backend",
+    "frontend"
+  ],
+  "scripts": {
+    "build": "npm run build --workspace packages/shared && npm run build --workspace backend && npm run build --workspace frontend",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "dev:backend": "npm run dev --workspace backend",
+    "dev:frontend": "npm run dev --workspace frontend"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

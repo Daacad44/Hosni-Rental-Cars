@@ -1,0 +1,25 @@
+/* Design tokens — the single source of colour, radius, and type. Components
+   reference these through Tailwind, never raw hex. */
+:root {
+  --color-primary: #0b1f3a; /* navy: sidebar, headers, primary buttons */
+  --color-primary-100: #e7ebf1; /* selected row, active nav background */
+  --color-accent: #f59e0b; /* amber: CTA fill, active indicator, KPI */
+  --color-accent-600: #b45309; /* amber-toned TEXT — the AA-safe one */
+  --color-background: #f6f8fb;
+  --color-surface: #ffffff;
+  --color-surface-alt: #f1f5f9;
+  --color-border: #e2e8f0;
+  --color-foreground: #0f172a;
+  --color-muted: #64748b;
+  --color-on-accent: #0b1f3a; /* navy on amber = 7.69:1 */
+  --color-success: #16a34a;
+  --color-warning: #d97706;
+  --color-error: #dc2626;
+  --color-info: #0369a1;
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+
+  --font-sans: 'Plus Jakarta Sans', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+}

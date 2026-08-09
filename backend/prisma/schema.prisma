@@ -1,0 +1,115 @@
+// Car rental management system — Prisma schema.
+// Module 1 (auth & staff accounts) foundation. Later modules extend this file.
+// organizationId is the security boundary and is indexed on every model.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  OWNER
+  MANAGER
+  AGENT
+  MECHANIC
+}
+
+enum Locale {
+  so
+  en
+}
+
+model Organization {
+  id        String   @id @default(cuid())
+  name      String
+  // IANA timezone; "Nightly" jobs run at 02:00 in this zone, not UTC.
+  timezone  String   @default("Africa/Mogadishu")
+  currency  String   @default("USD")
+  // VAT applied to rentals, exclusive. Stored as a percentage, e.g. 5.00 = 5%.
+  vatRate   Decimal  @default(5.00) @db.Decimal(5, 2)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  branches  Branch[]
+  users     User[]
+  auditLogs AuditLog[]
+}
+
+model Branch {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name           String
+  timezone       String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  users User[]
+
+  @@index([organizationId])
+}
+
+model User {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  branchId       String?
+  branch         Branch?      @relation(fields: [branchId], references: [id], onDelete: SetNull)
+
+  name         String
+  email        String
+  passwordHash String
+  role         Role
+  locale       Locale   @default(so)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  refreshTokens RefreshToken[]
+  auditLogs     AuditLog[]     @relation("AuditActor")
+
+  // Email is unique per organization, not globally.
+  @@unique([organizationId, email])
+  @@index([organizationId])
+  @@index([branchId])
+}
+
+model RefreshToken {
+  id             String    @id @default(cuid())
+  organizationId String
+  userId         String
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // sha-256 of the raw token; the raw value only ever lives in the cookie.
+  tokenHash      String    @unique
+  // Rotation family: a rotated token points back at the one it replaced.
+  familyId       String
+  expiresAt      DateTime
+  revokedAt      DateTime?
+  createdAt      DateTime  @default(now())
+
+  @@index([userId])
+  @@index([familyId])
+  @@index([organizationId])
+}
+
+model AuditLog {
+  id             String   @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  actorId        String?
+  actor          User?    @relation("AuditActor", fields: [actorId], references: [id], onDelete: SetNull)
+
+  action     String
+  entityType String
+  entityId   String?
+  before     Json?
+  after      Json?
+  createdAt  DateTime @default(now())
+
+  @@index([organizationId, entityType, entityId])
+  @@index([organizationId, createdAt])
+}

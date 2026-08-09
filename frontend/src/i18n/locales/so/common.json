@@ -1,0 +1,71 @@
+{
+  "app": { "name": "Hosni Rental Cars" },
+  "nav": {
+    "dashboard": "Dashboard",
+    "fleet": "Baabuurta",
+    "reservations": "Ballamaha",
+    "rentals": "Kirooyinka",
+    "customers": "Macaamiisha",
+    "invoices": "Qaansheegadaha",
+    "maintenance": "Dayactirka",
+    "expenses": "Kharashyada",
+    "reports": "Warbixinnada",
+    "settings": "Dejinta",
+    "users": "Shaqaalaha"
+  },
+  "auth": {
+    "signIn": "Gal",
+    "signingIn": "Waa la galayaa…",
+    "email": "Iimayl",
+    "password": "Furaha sirta",
+    "emailHelp": "Cinwaanka aad ku gasho",
+    "passwordHelp": "Ugu yaraan 8 xaraf",
+    "invalidCredentials": "Iimayl ama furaha sirta khaldan",
+    "rateLimited": "Isku day badan. Fadlan sug oo mar kale isku day.",
+    "signOut": "Ka bax",
+    "welcome": "Gal akoonkaaga"
+  },
+  "common": {
+    "loading": "Waa la soo rarayaa…",
+    "retry": "Isku day mar kale",
+    "cancel": "Jooji",
+    "save": "Kaydi",
+    "create": "Abuur",
+    "confirm": "Xaqiiji",
+    "search": "Raadi",
+    "language": "Luqadda",
+    "somali": "Soomaali",
+    "english": "Ingiriisi",
+    "errorTitle": "Wax baa qaldamay",
+    "errorBody": "Ma soo bandhigi karin. Fadlan mar kale isku day.",
+    "page": "Bog",
+    "of": "ka mid ah",
+    "comingSoon": "Qaybtan ayaa xigta."
+  },
+  "roles": {
+    "OWNER": "Milkiile",
+    "MANAGER": "Maareeye",
+    "AGENT": "Wakiil",
+    "MECHANIC": "Farsamayaqaan"
+  },
+  "users": {
+    "title": "Shaqaalaha",
+    "subtitle": "Maamul akoonnada iyo doorarka",
+    "add": "Ku dar shaqaale",
+    "name": "Magaca",
+    "role": "Doorka",
+    "branch": "Laanta",
+    "status": "Xaaladda",
+    "active": "Firfircoon",
+    "inactive": "Aan firfircoonayn",
+    "actions": "Ficillo",
+    "deactivate": "Joojin",
+    "deactivateConfirm": "Ma joojinaysaa {{name}}? Fadhiyadooda si degdeg ah ayaa loo joojinayaa.",
+    "created": "Shaqaale waa la abuuray",
+    "empty": "Weli shaqaale ma jiro",
+    "emptyBody": "Ku dar shaqaalahaaga koowaad si aad u bilowdo.",
+    "nameHelp": "Magaca oo buuxa sida uu u muuqan doono",
+    "passwordHelp": "Ugu yaraan 8 xaraf",
+    "noBranch": "Dhammaan laamaha"
+  }
+}
