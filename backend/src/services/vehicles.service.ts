@@ -12,6 +12,7 @@ import { prisma } from '../lib/prisma.js';
 import { AppError, notFound, conflict } from '../lib/AppError.js';
 import { writeAudit } from './audit.service.js';
 import { deriveVehicleStatus } from './vehicleStatus.service.js';
+import { resolveStatusInputs } from './vehicleStatusResolver.service.js';
 import type { AuthContext } from '../middleware/authenticate.js';
 
 /**
@@ -30,7 +31,10 @@ function money(value: Prisma.Decimal): string {
 
 type VehicleRow = Prisma.VehicleGetPayload<{ include: { branch: true } }>;
 
-function toDetail(v: VehicleRow): VehicleDetail {
+function toDetail(
+  v: VehicleRow,
+  extra: { hasActiveAgreement?: boolean; hasActiveReservation?: boolean } = {},
+): VehicleDetail {
   return {
     id: v.id,
     plateNumber: v.plateNumber,
@@ -48,7 +52,7 @@ function toDetail(v: VehicleRow): VehicleDetail {
     acquisitionDate: v.acquisitionDate.toISOString(),
     branchId: v.branchId,
     branchName: v.branch.name,
-    status: deriveVehicleStatus({ isOutOfService: v.isOutOfService }),
+    status: deriveVehicleStatus({ isOutOfService: v.isOutOfService, ...extra }),
     isOutOfService: v.isOutOfService,
     outOfServiceReason: v.outOfServiceReason,
     createdAt: v.createdAt.toISOString(),
@@ -120,6 +124,11 @@ export async function listVehicles(
     prisma.vehicle.count({ where }),
   ]);
 
+  const statusInputs = await resolveStatusInputs(
+    actor.organizationId,
+    rows.map((v) => v.id),
+  );
+
   const list: VehicleListItem[] = rows.map((v) => ({
     id: v.id,
     plateNumber: v.plateNumber,
@@ -129,7 +138,7 @@ export async function listVehicles(
     category: v.category,
     branchId: v.branchId,
     branchName: v.branch.name,
-    status: deriveVehicleStatus({ isOutOfService: v.isOutOfService }),
+    status: deriveVehicleStatus({ isOutOfService: v.isOutOfService, ...(statusInputs.get(v.id) ?? {}) }),
     odometer: v.odometer,
     photoCount: v._count.photos,
     hasExpiringDocs: v.documents.length > 0,
@@ -149,7 +158,9 @@ async function loadVehicle(actor: AuthContext, id: string): Promise<VehicleRow> 
 }
 
 export async function getVehicle(actor: AuthContext, id: string): Promise<VehicleDetail> {
-  return toDetail(await loadVehicle(actor, id));
+  const vehicle = await loadVehicle(actor, id);
+  const inputs = await resolveStatusInputs(actor.organizationId, [vehicle.id]);
+  return toDetail(vehicle, inputs.get(vehicle.id) ?? {});
 }
 
 export async function createVehicle(

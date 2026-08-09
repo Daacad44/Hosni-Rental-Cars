@@ -33,6 +33,10 @@ model Organization {
   vatRate   Decimal  @default(5.00) @db.Decimal(5, 2)
   // Minutes past a full day before the next day begins to be charged.
   graceMinutes Int   @default(59)
+  // Charge per eighth of a tank when a vehicle is returned lower on fuel.
+  fuelChargePerEighth Decimal @default(5.00) @db.Decimal(12, 2)
+  // Hours after pickup before a confirmed reservation is released as NO_SHOW.
+  noShowHours Int @default(4)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -43,6 +47,9 @@ model Organization {
   customers Customer[]
   rateCards RateCard[]
   reservations Reservation[]
+  agreements Agreement[]
+  invoices   Invoice[]
+  counters   Counter[]
 }
 
 model Branch {
@@ -335,4 +342,209 @@ model Reservation {
   @@index([organizationId, status])
   @@index([vehicleId, startAt, endAt])
   @@index([customerId])
+}
+
+// ── Modules 6-8: Agreements, inspections, damage, invoicing, payments ───────
+
+// Gapless sequence allocator, incremented inside the creating transaction.
+model Counter {
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name           String // e.g. "agreement", "invoice"
+  value          Int          @default(0)
+
+  @@id([organizationId, name])
+}
+
+enum AgreementStatus {
+  OPEN
+  OVERDUE
+  CLOSED
+}
+
+model Agreement {
+  id              String       @id @default(cuid())
+  organizationId  String
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  branchId        String
+  agreementNumber Int
+  reservationId   String?
+  customerId      String
+  vehicleId       String
+
+  startAt DateTime
+  endAt   DateTime // planned return
+  status  AgreementStatus @default(OPEN)
+
+  checkoutOdometer Int
+  checkinOdometer  Int?
+  checkoutFuel     Int // eighths 0-8
+  checkinFuel      Int?
+
+  withDriver Boolean @default(false)
+
+  // The exact rate snapshot inherited from the reservation/quote. A later
+  // rate-card edit never alters an existing contract.
+  rateValues Json
+
+  closedAt    DateTime?
+  createdById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  inspections Inspection[]
+  invoices    Invoice[]
+
+  @@unique([organizationId, agreementNumber])
+  @@index([organizationId, status])
+  @@index([organizationId, branchId])
+  @@index([vehicleId])
+  @@index([customerId])
+}
+
+enum InspectionType {
+  CHECKOUT
+  CHECKIN
+}
+
+model Inspection {
+  id             String         @id @default(cuid())
+  organizationId String
+  agreementId    String
+  agreement      Agreement      @relation(fields: [agreementId], references: [id], onDelete: Cascade)
+  type           InspectionType
+  odometer       Int
+  fuelEighths    Int
+  checklist      Json
+  notes          String?
+  signatureKey   String?
+
+  // Append-only: a correction is a new record referencing the original.
+  supersedesId String?
+
+  createdById String?
+  createdAt   DateTime @default(now())
+
+  photos  InspectionPhoto[]
+  damages Damage[]
+
+  @@index([organizationId])
+  @@index([agreementId])
+}
+
+model InspectionPhoto {
+  id             String     @id @default(cuid())
+  organizationId String
+  inspectionId   String
+  inspection     Inspection @relation(fields: [inspectionId], references: [id], onDelete: Cascade)
+  storageKey     String
+  contentType    String
+  position       Int        @default(0)
+  createdAt      DateTime   @default(now())
+
+  @@index([inspectionId])
+}
+
+enum DamageSeverity {
+  MINOR
+  MODERATE
+  SEVERE
+}
+
+model Damage {
+  id             String         @id @default(cuid())
+  organizationId String
+  vehicleId      String
+  agreementId    String?
+  inspectionId   String?
+  inspection     Inspection?    @relation(fields: [inspectionId], references: [id], onDelete: SetNull)
+
+  panel    String
+  severity DamageSeverity
+  notes    String?
+
+  chargeable   Boolean  @default(false)
+  chargeAmount Decimal? @db.Decimal(12, 2)
+  approvedById String?
+
+  // Persists on the vehicle until repaired; then it stops being pre-existing.
+  repairedAt DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@index([organizationId])
+  @@index([vehicleId, repairedAt])
+}
+
+enum PaymentMethod {
+  CASH
+  CARD
+  MOBILE_MONEY
+  BANK_TRANSFER
+}
+
+model Invoice {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  branchId       String
+  invoiceNumber  Int
+  agreementId    String?
+  agreement      Agreement?   @relation(fields: [agreementId], references: [id], onDelete: SetNull)
+  customerId     String
+
+  // Derived from the balance; never typed. Recomputed with any line/payment.
+  total   Decimal @default(0) @db.Decimal(12, 2)
+  paid    Decimal @default(0) @db.Decimal(12, 2)
+  balance Decimal @default(0) @db.Decimal(12, 2)
+
+  isVoid       Boolean   @default(false)
+  voidReason   String?
+  voidedById   String?
+  voidedAt     DateTime?
+
+  createdById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  lines    InvoiceLine[]
+  payments Payment[]
+
+  @@unique([organizationId, invoiceNumber])
+  @@index([organizationId, branchId])
+  @@index([agreementId])
+  @@index([customerId])
+}
+
+model InvoiceLine {
+  id             String   @id @default(cuid())
+  organizationId String
+  invoiceId      String
+  invoice        Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  kind           String
+  description    String
+  quantity       Int      @default(1)
+  unitAmount     Decimal  @db.Decimal(12, 2)
+  amount         Decimal  @db.Decimal(12, 2)
+  createdAt      DateTime @default(now())
+
+  @@index([invoiceId])
+}
+
+model Payment {
+  id             String        @id @default(cuid())
+  organizationId String
+  invoiceId      String
+  invoice        Invoice       @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  amount         Decimal       @db.Decimal(12, 2)
+  method         PaymentMethod
+  reference      String?
+  receivedById   String?
+  // Idempotency: a double-submitted payment must never be recorded twice.
+  idempotencyKey String?
+  createdAt      DateTime      @default(now())
+
+  @@unique([organizationId, idempotencyKey])
+  @@index([invoiceId])
+  @@index([organizationId, createdAt])
 }

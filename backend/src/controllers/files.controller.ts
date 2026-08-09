@@ -1,8 +1,20 @@
 import type { Request, Response } from 'express';
 import { requireUser } from '../middleware/authenticate.js';
+import { created } from '../lib/respond.js';
 import { AppError, notFound } from '../lib/AppError.js';
 import { env } from '../config/env.js';
+import { storage, makeKey } from '../services/storage/index.js';
 import { LocalStorageAdapter, verifyKeySignature } from '../services/storage/localAdapter.js';
+
+/** Generic authenticated upload: stores a file privately, returns its key. */
+export async function upload(req: Request, res: Response): Promise<void> {
+  const actor = requireUser(req);
+  const file = req.file;
+  if (!file) throw new AppError('VALIDATION_ERROR', 'A file is required');
+  const key = makeKey(actor.organizationId, 'inspections', file.mimetype);
+  const stored = await storage().put(key, file.buffer, file.mimetype);
+  created(res, { storageKey: stored.key });
+}
 
 /**
  * Serves a locally-stored object for a valid, unexpired signature. Only used by

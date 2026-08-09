@@ -6,3 +6,6 @@ export * from './schemas/vehicle.js';
 export * from './schemas/customer.js';
 export * from './schemas/pricing.js';
 export * from './schemas/reservation.js';
+export * from './schemas/settlement.js';
+export * from './schemas/invoice.js';
+export * from './schemas/agreement.js';

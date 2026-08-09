@@ -6,7 +6,10 @@ import { branchRoutes } from './branches.routes.js';
 import { customerRoutes } from './customers.routes.js';
 import { rateCardRoutes, quoteRoutes } from './pricing.routes.js';
 import { reservationRoutes } from './reservations.routes.js';
+import { agreementRoutes } from './agreements.routes.js';
+import { invoiceRoutes } from './invoices.routes.js';
 import { authenticate } from '../middleware/authenticate.js';
+import { singleUpload } from '../middleware/upload.js';
 import { asyncHandler } from '../lib/respond.js';
 import * as files from '../controllers/files.controller.js';
 
@@ -21,4 +24,7 @@ apiRouter.use('/customers', customerRoutes);
 apiRouter.use('/rate-cards', rateCardRoutes);
 apiRouter.use('/quotes', quoteRoutes);
 apiRouter.use('/reservations', reservationRoutes);
+apiRouter.use('/agreements', agreementRoutes);
+apiRouter.use('/invoices', invoiceRoutes);
 apiRouter.get('/files', authenticate, asyncHandler(files.download));
+apiRouter.post('/uploads', authenticate, singleUpload, asyncHandler(files.upload));

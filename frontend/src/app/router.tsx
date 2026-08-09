@@ -16,6 +16,13 @@ const ReservationListPage = lazy(() => import('../features/reservations/Reservat
 const NewReservationPage = lazy(() => import('../features/reservations/NewReservationPage'));
 const ReservationDetailPage = lazy(() => import('../features/reservations/ReservationDetailPage'));
 const CalendarPage = lazy(() => import('../features/reservations/CalendarPage'));
+const AgreementListPage = lazy(() => import('../features/agreements/AgreementListPage'));
+const AgreementDetailPage = lazy(() => import('../features/agreements/AgreementDetailPage'));
+const CheckoutWizard = lazy(() => import('../features/agreements/CheckoutWizard'));
+const CheckinWizard = lazy(() => import('../features/agreements/CheckinWizard'));
+const InvoiceListPage = lazy(() => import('../features/invoices/InvoiceListPage'));
+const InvoiceDetailPage = lazy(() => import('../features/invoices/InvoiceDetailPage'));
+const CashSummaryPage = lazy(() => import('../features/invoices/CashSummaryPage'));
 const PlaceholderPage = lazy(() => import('../routes/PlaceholderPage'));
 
 function Lazy({ children }: { children: ReactNode }) {
@@ -44,12 +51,17 @@ export const router = createBrowserRouter([
       { path: 'reservations/new', element: <Lazy><NewReservationPage /></Lazy> },
       { path: 'reservations/calendar', element: <Lazy><CalendarPage /></Lazy> },
       { path: 'reservations/:id', element: <Lazy><ReservationDetailPage /></Lazy> },
-      { path: 'rentals', element: placeholder('nav.rentals') },
+      { path: 'rentals', element: <Lazy><AgreementListPage /></Lazy> },
+      { path: 'rentals/checkout', element: <Lazy><CheckoutWizard /></Lazy> },
+      { path: 'rentals/:id', element: <Lazy><AgreementDetailPage /></Lazy> },
+      { path: 'rentals/:id/checkin', element: <Lazy><CheckinWizard /></Lazy> },
       { path: 'customers', element: <Lazy><CustomerListPage /></Lazy> },
       { path: 'customers/new', element: <Lazy><CustomerFormPage /></Lazy> },
       { path: 'customers/:id', element: <Lazy><CustomerDetailPage /></Lazy> },
       { path: 'customers/:id/edit', element: <Lazy><CustomerFormPage /></Lazy> },
-      { path: 'invoices', element: placeholder('nav.invoices') },
+      { path: 'invoices', element: <Lazy><InvoiceListPage /></Lazy> },
+      { path: 'invoices/cash-summary', element: <Lazy><CashSummaryPage /></Lazy> },
+      { path: 'invoices/:id', element: <Lazy><InvoiceDetailPage /></Lazy> },
       { path: 'maintenance', element: placeholder('nav.maintenance') },
       { path: 'expenses', element: placeholder('nav.expenses') },
       {

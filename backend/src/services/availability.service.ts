@@ -41,9 +41,20 @@ export async function assertVehicleFree(
   });
   if (clash) throw new AppError('OVERLAPPING_RESERVATION', 'The vehicle is already booked for this period');
 
-  // Extension points wired up by later modules:
-  // - agreements: reject on an overlapping open agreement for this vehicle
-  // - maintenance: reject on an overlapping scheduled maintenance window
+  const openAgreement = await tx.agreement.findFirst({
+    where: {
+      organizationId: params.organizationId,
+      vehicleId: params.vehicleId,
+      status: { in: ['OPEN', 'OVERDUE'] },
+      startAt: { lt: params.endAt },
+      endAt: { gt: params.startAt },
+    },
+    select: { id: true },
+  });
+  if (openAgreement) throw new AppError('VEHICLE_UNAVAILABLE', 'The vehicle is on an open rental for this period');
+
+  // Extension point: the maintenance module rejects on an overlapping
+  // scheduled maintenance window here.
 }
 
 /** Postgres exclusion-violation code, mapped to OVERLAPPING_RESERVATION. */
