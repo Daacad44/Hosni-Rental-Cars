@@ -127,6 +127,39 @@
     "noDocuments": "No documents recorded",
     "noPhotos": "No photos yet"
   },
+  "pricing": {
+    "line": {
+      "monthly": "Monthly rate",
+      "weekly": "Weekly rate",
+      "daily": "Daily rate",
+      "late": "Late hours",
+      "extraKm": "Extra kilometres",
+      "vat": "VAT"
+    }
+  },
+  "settings": {
+    "title": "Settings",
+    "rateCards": "Rate cards",
+    "rateCardsSubtitle": "Pricing per vehicle category",
+    "addRateCard": "Add rate card",
+    "editRateCard": "Edit rate card",
+    "category": "Category",
+    "dailyRate": "Daily rate",
+    "weeklyRate": "Weekly rate",
+    "monthlyRate": "Monthly rate",
+    "includedKmPerDay": "Included km / day",
+    "unlimitedKm": "Leave blank for unlimited",
+    "extraKmRate": "Extra km rate",
+    "depositAmount": "Deposit",
+    "lateHourRate": "Late hour rate",
+    "effectiveFrom": "Effective from",
+    "effectiveTo": "Effective to (optional)",
+    "vehicleOverride": "Vehicle override ID (optional)",
+    "noRateCards": "No rate cards yet",
+    "noRateCardsBody": "Add a rate card so vehicles can be priced.",
+    "save": "Save rate card",
+    "unlimited": "Unlimited"
+  },
   "customers": {
     "title": "Customers",
     "subtitle": "Customer records",

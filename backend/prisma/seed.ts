@@ -95,6 +95,51 @@ async function main() {
     });
   }
 
+  // Category rate cards so vehicles can be priced immediately.
+  const rateCards = [
+    {
+      id: 'seed-rate-economy',
+      category: 'ECONOMY',
+      dailyRate: '35.00',
+      weeklyRate: '210.00',
+      monthlyRate: '750.00',
+      includedKmPerDay: 150,
+      extraKmRate: '0.20',
+      depositAmount: '150.00',
+      lateHourRate: '6.00',
+    },
+    {
+      id: 'seed-rate-suv',
+      category: 'SUV',
+      dailyRate: '70.00',
+      weeklyRate: '420.00',
+      monthlyRate: '1600.00',
+      includedKmPerDay: 200,
+      extraKmRate: '0.35',
+      depositAmount: '400.00',
+      lateHourRate: '10.00',
+    },
+  ];
+  for (const rc of rateCards) {
+    await prisma.rateCard.upsert({
+      where: { id: rc.id },
+      update: {},
+      create: {
+        id: rc.id,
+        organizationId: org.id,
+        category: rc.category,
+        dailyRate: rc.dailyRate,
+        weeklyRate: rc.weeklyRate,
+        monthlyRate: rc.monthlyRate,
+        includedKmPerDay: rc.includedKmPerDay,
+        extraKmRate: rc.extraKmRate,
+        depositAmount: rc.depositAmount,
+        lateHourRate: rc.lateHourRate,
+        effectiveFrom: new Date('2024-01-01'),
+      },
+    });
+  }
+
   // eslint-disable-next-line no-console
   console.log('Seed complete. Login with owner@hosni.test / ChangeMe123!');
 }

@@ -127,6 +127,39 @@
     "noDocuments": "Dukumenti lama diiwaangelin",
     "noPhotos": "Weli sawir ma jiro"
   },
+  "pricing": {
+    "line": {
+      "monthly": "Qiimaha bishii",
+      "weekly": "Qiimaha usbuucii",
+      "daily": "Qiimaha maalintii",
+      "late": "Saacadaha daahay",
+      "extraKm": "Kiiloomitir dheeraad ah",
+      "vat": "VAT"
+    }
+  },
+  "settings": {
+    "title": "Dejinta",
+    "rateCards": "Kaararka qiimaha",
+    "rateCardsSubtitle": "Qiimaha qayb kasta oo baabuur",
+    "addRateCard": "Ku dar kaarka qiimaha",
+    "editRateCard": "Wax ka beddel kaarka",
+    "category": "Qaybta",
+    "dailyRate": "Qiimaha maalintii",
+    "weeklyRate": "Qiimaha usbuucii",
+    "monthlyRate": "Qiimaha bishii",
+    "includedKmPerDay": "Km maalintii oo ku jira",
+    "unlimitedKm": "Uga tag banaan si aan xad lahayn",
+    "extraKmRate": "Qiimaha km dheeraadka",
+    "depositAmount": "Deebaaji",
+    "lateHourRate": "Qiimaha saacadda daahday",
+    "effectiveFrom": "Laga bilaabo",
+    "effectiveTo": "Ilaa (ikhtiyaari)",
+    "vehicleOverride": "ID baabuur gaar ah (ikhtiyaari)",
+    "noRateCards": "Weli kaar qiime ma jiro",
+    "noRateCardsBody": "Ku dar kaar qiime si baabuurta loo qiimeeyo.",
+    "save": "Kaydi kaarka",
+    "unlimited": "Aan xad lahayn"
+  },
   "customers": {
     "title": "Macaamiisha",
     "subtitle": "Diiwaanka macaamiisha",

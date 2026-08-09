@@ -11,6 +11,7 @@ const VehicleDetailPage = lazy(() => import('../features/fleet/VehicleDetailPage
 const CustomerListPage = lazy(() => import('../features/customers/CustomerListPage'));
 const CustomerFormPage = lazy(() => import('../features/customers/CustomerFormPage'));
 const CustomerDetailPage = lazy(() => import('../features/customers/CustomerDetailPage'));
+const RateCardsPage = lazy(() => import('../features/settings/RateCardsPage'));
 const PlaceholderPage = lazy(() => import('../routes/PlaceholderPage'));
 
 function Lazy({ children }: { children: ReactNode }) {
@@ -62,7 +63,13 @@ export const router = createBrowserRouter([
       },
       {
         path: 'settings',
-        element: <RequireRole allow={['OWNER']}>{placeholder('nav.settings')}</RequireRole>,
+        element: (
+          <RequireRole allow={['OWNER']}>
+            <Lazy>
+              <RateCardsPage />
+            </Lazy>
+          </RequireRole>
+        ),
       },
     ],
   },

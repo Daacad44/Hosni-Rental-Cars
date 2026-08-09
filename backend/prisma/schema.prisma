@@ -31,6 +31,8 @@ model Organization {
   currency  String   @default("USD")
   // VAT applied to rentals, exclusive. Stored as a percentage, e.g. 5.00 = 5%.
   vatRate   Decimal  @default(5.00) @db.Decimal(5, 2)
+  // Minutes past a full day before the next day begins to be charged.
+  graceMinutes Int   @default(59)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -39,6 +41,7 @@ model Organization {
   auditLogs AuditLog[]
   vehicles  Vehicle[]
   customers Customer[]
+  rateCards RateCard[]
 }
 
 model Branch {
@@ -256,4 +259,34 @@ model Customer {
   @@index([organizationId])
   @@index([organizationId, phone])
   // A GIN trigram index on fullName is added in the migration for forgiving search.
+}
+
+// ── Module 4: Pricing & rate cards ──────────────────────────────────────────
+
+model RateCard {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  category String
+  // Null = the category card. Set = an override for one specific vehicle.
+  vehicleId String?
+
+  dailyRate        Decimal  @db.Decimal(12, 2)
+  weeklyRate       Decimal? @db.Decimal(12, 2)
+  monthlyRate      Decimal? @db.Decimal(12, 2)
+  // Null = UNLIMITED included kilometres, which is different from zero.
+  includedKmPerDay Int?
+  extraKmRate      Decimal  @db.Decimal(12, 2)
+  depositAmount    Decimal  @db.Decimal(12, 2)
+  lateHourRate     Decimal  @db.Decimal(12, 2)
+
+  effectiveFrom DateTime
+  effectiveTo   DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([organizationId, category, effectiveFrom])
+  @@index([organizationId, vehicleId, effectiveFrom])
 }
