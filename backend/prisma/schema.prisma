@@ -1,0 +1,674 @@
+// Car rental management system — Prisma schema.
+// Module 1 (auth & staff accounts) foundation. Later modules extend this file.
+// organizationId is the security boundary and is indexed on every model.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  OWNER
+  MANAGER
+  AGENT
+  MECHANIC
+}
+
+enum Locale {
+  so
+  en
+}
+
+model Organization {
+  id        String   @id @default(cuid())
+  name      String
+  // IANA timezone; "Nightly" jobs run at 02:00 in this zone, not UTC.
+  timezone  String   @default("Africa/Mogadishu")
+  currency  String   @default("USD")
+  // VAT applied to rentals, exclusive. Stored as a percentage, e.g. 5.00 = 5%.
+  vatRate   Decimal  @default(5.00) @db.Decimal(5, 2)
+  // Minutes past a full day before the next day begins to be charged.
+  graceMinutes Int   @default(59)
+  // Charge per eighth of a tank when a vehicle is returned lower on fuel.
+  fuelChargePerEighth Decimal @default(5.00) @db.Decimal(12, 2)
+  // Hours after pickup before a confirmed reservation is released as NO_SHOW.
+  noShowHours Int @default(4)
+  // Service interval and "due soon" thresholds for maintenance.
+  serviceIntervalKm    Int @default(5000)
+  serviceIntervalDays  Int @default(180)
+  serviceThresholdKm   Int @default(500)
+  serviceThresholdDays Int @default(14)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  branches  Branch[]
+  users     User[]
+  auditLogs AuditLog[]
+  vehicles  Vehicle[]
+  customers Customer[]
+  rateCards RateCard[]
+  reservations Reservation[]
+  agreements Agreement[]
+  invoices   Invoice[]
+  counters   Counter[]
+  maintenance Maintenance[]
+  expenses    Expense[]
+  fines       TrafficFine[]
+  alerts      Alert[]
+}
+
+model Branch {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name           String
+  timezone       String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  users    User[]
+  vehicles Vehicle[]
+
+  @@index([organizationId])
+}
+
+model User {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  branchId       String?
+  branch         Branch?      @relation(fields: [branchId], references: [id], onDelete: SetNull)
+
+  name         String
+  email        String
+  passwordHash String
+  role         Role
+  locale       Locale   @default(so)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  refreshTokens RefreshToken[]
+  auditLogs     AuditLog[]     @relation("AuditActor")
+
+  // Email is unique per organization, not globally.
+  @@unique([organizationId, email])
+  @@index([organizationId])
+  @@index([branchId])
+}
+
+model RefreshToken {
+  id             String    @id @default(cuid())
+  organizationId String
+  userId         String
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // sha-256 of the raw token; the raw value only ever lives in the cookie.
+  tokenHash      String    @unique
+  // Rotation family: a rotated token points back at the one it replaced.
+  familyId       String
+  expiresAt      DateTime
+  revokedAt      DateTime?
+  createdAt      DateTime  @default(now())
+
+  @@index([userId])
+  @@index([familyId])
+  @@index([organizationId])
+}
+
+model AuditLog {
+  id             String   @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  actorId        String?
+  actor          User?    @relation("AuditActor", fields: [actorId], references: [id], onDelete: SetNull)
+
+  action     String
+  entityType String
+  entityId   String?
+  before     Json?
+  after      Json?
+  createdAt  DateTime @default(now())
+
+  @@index([organizationId, entityType, entityId])
+  @@index([organizationId, createdAt])
+}
+
+// ── Module 2: Fleet & vehicles ──────────────────────────────────────────────
+
+enum Transmission {
+  MANUAL
+  AUTOMATIC
+}
+
+enum FuelType {
+  PETROL
+  DIESEL
+  HYBRID
+  ELECTRIC
+}
+
+enum VehicleDocumentType {
+  INSURANCE
+  REGISTRATION
+  INSPECTION
+  PERMIT
+}
+
+model Vehicle {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  branchId       String
+  branch         Branch       @relation(fields: [branchId], references: [id])
+
+  plateNumber  String
+  vin          String
+  make         String
+  model        String
+  year         Int
+  // Category is organization-defined free text; rate cards key on it.
+  category     String
+  transmission Transmission
+  fuelType     FuelType
+  seats        Int
+  colour       String
+  // Odometer in kilometres. Monotonic: a lower reading needs a manager override.
+  odometer     Int          @default(0)
+
+  acquisitionCost Decimal  @db.Decimal(12, 2)
+  acquisitionDate DateTime
+
+  // The only manual status override (§5.2). All other states are derived from
+  // active agreements, reservations, and open maintenance at read time.
+  isOutOfService     Boolean @default(false)
+  outOfServiceReason String?
+
+  // Soft delete: hidden from lists, retained on historical agreements.
+  deletedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  photos    VehiclePhoto[]
+  documents VehicleDocument[]
+
+  // Plate is unique per organization among live rows. Enforced by a partial
+  // unique index (WHERE deletedAt IS NULL) added in the migration, so a plate
+  // can be reused after a vehicle is soft-deleted.
+  @@index([organizationId, plateNumber])
+  @@index([organizationId])
+  @@index([organizationId, branchId])
+  @@index([organizationId, category])
+}
+
+model VehiclePhoto {
+  id             String   @id @default(cuid())
+  organizationId String
+  vehicleId      String
+  vehicle        Vehicle  @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  // Object-storage key in the private bucket; served only via signed URLs.
+  storageKey     String
+  contentType    String
+  sizeBytes      Int
+  position       Int      @default(0)
+  createdAt      DateTime @default(now())
+
+  @@index([vehicleId])
+  @@index([organizationId])
+}
+
+model VehicleDocument {
+  id             String              @id @default(cuid())
+  organizationId String
+  vehicleId      String
+  vehicle        Vehicle             @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  type           VehicleDocumentType
+  number         String
+  issueDate      DateTime
+  // Indexed: a nightly job scans it for upcoming expiry (built in the alerts module).
+  expiryDate     DateTime
+  storageKey     String?
+  contentType    String?
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+
+  @@index([vehicleId])
+  @@index([organizationId, expiryDate])
+}
+
+// ── Module 3: Customers ─────────────────────────────────────────────────────
+
+model Customer {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  fullName      String
+  phone         String
+  email         String?
+  nationalId    String?
+  licenceNumber String?
+  licenceExpiry DateTime?
+  address       String?
+  notes         String?
+
+  // Scans held in the private bucket, served via signed URLs only.
+  licenceScanKey String?
+  idScanKey      String?
+
+  isBlocked   Boolean   @default(false)
+  blockReason String?
+  blockedAt   DateTime?
+  blockedById String?
+
+  // Duplicate merge is a soft delete of the losing record onto the winner.
+  mergedIntoId String?
+  deletedAt    DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Phone is unique per organization among live rows (partial index in migration).
+  @@index([organizationId])
+  @@index([organizationId, phone])
+  // A GIN trigram index on fullName is added in the migration for forgiving search.
+}
+
+// ── Module 4: Pricing & rate cards ──────────────────────────────────────────
+
+model RateCard {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  category String
+  // Null = the category card. Set = an override for one specific vehicle.
+  vehicleId String?
+
+  dailyRate        Decimal  @db.Decimal(12, 2)
+  weeklyRate       Decimal? @db.Decimal(12, 2)
+  monthlyRate      Decimal? @db.Decimal(12, 2)
+  // Null = UNLIMITED included kilometres, which is different from zero.
+  includedKmPerDay Int?
+  extraKmRate      Decimal  @db.Decimal(12, 2)
+  depositAmount    Decimal  @db.Decimal(12, 2)
+  lateHourRate     Decimal  @db.Decimal(12, 2)
+
+  effectiveFrom DateTime
+  effectiveTo   DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([organizationId, category, effectiveFrom])
+  @@index([organizationId, vehicleId, effectiveFrom])
+}
+
+// ── Module 5: Reservations & availability ───────────────────────────────────
+
+enum ReservationStatus {
+  PENDING
+  CONFIRMED
+  CONVERTED
+  CANCELLED
+  NO_SHOW
+}
+
+model Reservation {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  branchId       String
+  customerId     String
+
+  // A reservation targets a category, with a specific vehicle assigned before
+  // pickup. vehicleId is null until assigned.
+  category  String
+  vehicleId String?
+
+  startAt DateTime
+  endAt   DateTime
+  status  ReservationStatus @default(PENDING)
+
+  // The quote is computed server-side and stored; the agreement inherits it.
+  // rateValues is the exact rate snapshot so a later rate-card edit never alters
+  // this reservation. quoteBreakdown is the full line-by-line breakdown.
+  quotedTotal    Decimal @db.Decimal(12, 2)
+  quotedDeposit  Decimal @db.Decimal(12, 2)
+  rateValues     Json
+  quoteBreakdown Json
+
+  createdById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([organizationId])
+  @@index([organizationId, branchId])
+  @@index([organizationId, status])
+  @@index([vehicleId, startAt, endAt])
+  @@index([customerId])
+}
+
+// ── Modules 6-8: Agreements, inspections, damage, invoicing, payments ───────
+
+// Gapless sequence allocator, incremented inside the creating transaction.
+model Counter {
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name           String // e.g. "agreement", "invoice"
+  value          Int          @default(0)
+
+  @@id([organizationId, name])
+}
+
+enum AgreementStatus {
+  OPEN
+  OVERDUE
+  CLOSED
+}
+
+model Agreement {
+  id              String       @id @default(cuid())
+  organizationId  String
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  branchId        String
+  agreementNumber Int
+  reservationId   String?
+  customerId      String
+  vehicleId       String
+
+  startAt DateTime
+  endAt   DateTime // planned return
+  status  AgreementStatus @default(OPEN)
+
+  checkoutOdometer Int
+  checkinOdometer  Int?
+  checkoutFuel     Int // eighths 0-8
+  checkinFuel      Int?
+
+  withDriver Boolean @default(false)
+
+  // The exact rate snapshot inherited from the reservation/quote. A later
+  // rate-card edit never alters an existing contract.
+  rateValues Json
+
+  closedAt    DateTime?
+  createdById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  inspections Inspection[]
+  invoices    Invoice[]
+
+  @@unique([organizationId, agreementNumber])
+  @@index([organizationId, status])
+  @@index([organizationId, branchId])
+  @@index([vehicleId])
+  @@index([customerId])
+}
+
+enum InspectionType {
+  CHECKOUT
+  CHECKIN
+}
+
+model Inspection {
+  id             String         @id @default(cuid())
+  organizationId String
+  agreementId    String
+  agreement      Agreement      @relation(fields: [agreementId], references: [id], onDelete: Cascade)
+  type           InspectionType
+  odometer       Int
+  fuelEighths    Int
+  checklist      Json
+  notes          String?
+  signatureKey   String?
+
+  // Append-only: a correction is a new record referencing the original.
+  supersedesId String?
+
+  createdById String?
+  createdAt   DateTime @default(now())
+
+  photos  InspectionPhoto[]
+  damages Damage[]
+
+  @@index([organizationId])
+  @@index([agreementId])
+}
+
+model InspectionPhoto {
+  id             String     @id @default(cuid())
+  organizationId String
+  inspectionId   String
+  inspection     Inspection @relation(fields: [inspectionId], references: [id], onDelete: Cascade)
+  storageKey     String
+  contentType    String
+  position       Int        @default(0)
+  createdAt      DateTime   @default(now())
+
+  @@index([inspectionId])
+}
+
+enum DamageSeverity {
+  MINOR
+  MODERATE
+  SEVERE
+}
+
+model Damage {
+  id             String         @id @default(cuid())
+  organizationId String
+  vehicleId      String
+  agreementId    String?
+  inspectionId   String?
+  inspection     Inspection?    @relation(fields: [inspectionId], references: [id], onDelete: SetNull)
+
+  panel    String
+  severity DamageSeverity
+  notes    String?
+
+  chargeable   Boolean  @default(false)
+  chargeAmount Decimal? @db.Decimal(12, 2)
+  approvedById String?
+
+  // Persists on the vehicle until repaired; then it stops being pre-existing.
+  repairedAt DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@index([organizationId])
+  @@index([vehicleId, repairedAt])
+}
+
+enum PaymentMethod {
+  CASH
+  CARD
+  MOBILE_MONEY
+  BANK_TRANSFER
+}
+
+model Invoice {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  branchId       String
+  invoiceNumber  Int
+  agreementId    String?
+  agreement      Agreement?   @relation(fields: [agreementId], references: [id], onDelete: SetNull)
+  customerId     String
+
+  // Derived from the balance; never typed. Recomputed with any line/payment.
+  total   Decimal @default(0) @db.Decimal(12, 2)
+  paid    Decimal @default(0) @db.Decimal(12, 2)
+  balance Decimal @default(0) @db.Decimal(12, 2)
+
+  isVoid       Boolean   @default(false)
+  voidReason   String?
+  voidedById   String?
+  voidedAt     DateTime?
+
+  createdById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  lines    InvoiceLine[]
+  payments Payment[]
+
+  @@unique([organizationId, invoiceNumber])
+  @@index([organizationId, branchId])
+  @@index([agreementId])
+  @@index([customerId])
+}
+
+model InvoiceLine {
+  id             String   @id @default(cuid())
+  organizationId String
+  invoiceId      String
+  invoice        Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  kind           String
+  description    String
+  quantity       Int      @default(1)
+  unitAmount     Decimal  @db.Decimal(12, 2)
+  amount         Decimal  @db.Decimal(12, 2)
+  createdAt      DateTime @default(now())
+
+  @@index([invoiceId])
+}
+
+model Payment {
+  id             String        @id @default(cuid())
+  organizationId String
+  invoiceId      String
+  invoice        Invoice       @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  amount         Decimal       @db.Decimal(12, 2)
+  method         PaymentMethod
+  reference      String?
+  receivedById   String?
+  // Idempotency: a double-submitted payment must never be recorded twice.
+  idempotencyKey String?
+  createdAt      DateTime      @default(now())
+
+  @@unique([organizationId, idempotencyKey])
+  @@index([invoiceId])
+  @@index([organizationId, createdAt])
+}
+
+// ── Module 9: Maintenance ───────────────────────────────────────────────────
+
+enum MaintenanceStatus {
+  SCHEDULED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+model Maintenance {
+  id             String            @id @default(cuid())
+  organizationId String
+  organization   Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  vehicleId      String
+  type           String
+  status         MaintenanceStatus @default(SCHEDULED)
+
+  // The window this record blocks the vehicle for.
+  scheduledStart DateTime
+  scheduledEnd   DateTime
+
+  odometer Int?
+  vendor   String?
+  // Cost is read into cost reporting; never copied into the expense table.
+  cost     Decimal? @db.Decimal(12, 2)
+  notes    String?
+
+  nextDueAt       DateTime?
+  nextDueOdometer Int?
+  completedAt     DateTime?
+
+  createdById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([organizationId, status])
+  @@index([vehicleId, status])
+  @@index([organizationId, scheduledStart])
+}
+
+// ── Module 10: Expenses & traffic fines ─────────────────────────────────────
+
+enum ExpenseCategory {
+  FUEL
+  INSURANCE
+  FINE
+  SALARY
+  PARTS
+  PERMIT
+  OTHER
+}
+
+model Expense {
+  id             String          @id @default(cuid())
+  organizationId String
+  organization   Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  branchId       String?
+  vehicleId      String?
+  category       ExpenseCategory
+  amount         Decimal         @db.Decimal(12, 2)
+  date           DateTime
+  description    String?
+  receiptKey     String?
+  createdById    String?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  @@index([organizationId, category])
+  @@index([organizationId, date])
+  @@index([organizationId, vehicleId])
+  @@index([organizationId, branchId])
+}
+
+model TrafficFine {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  noticeNumber   String
+  offenceAt      DateTime
+  location       String
+  amount         Decimal      @db.Decimal(12, 2)
+  vehicleId      String?
+  // The agreement active on that vehicle at the offence moment (suggested).
+  agreementId    String?
+  customerCharged Boolean     @default(false)
+  invoiceId      String?
+  notes          String?
+  createdById    String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@index([organizationId, offenceAt])
+  @@index([organizationId, vehicleId])
+}
+
+// ── Module 11: Alerts ───────────────────────────────────────────────────────
+
+model Alert {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  type           String
+  entityType     String
+  entityId       String
+  // Date-only bucket so a repeated run does not raise a duplicate alert.
+  raisedOn       DateTime
+  message        String
+  resolvedAt     DateTime?
+  createdAt      DateTime     @default(now())
+
+  // Prevents an alert storm after a worker outage.
+  @@unique([organizationId, type, entityId, raisedOn])
+  @@index([organizationId, resolvedAt])
+}

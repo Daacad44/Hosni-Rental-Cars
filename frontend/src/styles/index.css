@@ -1,0 +1,33 @@
+@import './tokens.css';
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    font-family: var(--font-sans);
+  }
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-size: 14px;
+    line-height: 1.5;
+  }
+  /* Tabular figures for all numeric/monospace data. */
+  .font-mono,
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+  /* Visible focus rings, never removed. */
+  :focus-visible {
+    outline: 2px solid var(--color-accent-600);
+    outline-offset: 2px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
