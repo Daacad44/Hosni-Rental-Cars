@@ -48,6 +48,53 @@ async function main() {
     });
   }
 
+  // A couple of vehicles so the fleet register is demonstrable on first run.
+  const vehicles = [
+    {
+      id: 'seed-veh-1',
+      plateNumber: 'MOG-1001',
+      vin: 'JT2BF22K1W0123456',
+      make: 'Toyota',
+      model: 'Corolla',
+      year: 2019,
+      category: 'ECONOMY',
+      transmission: 'AUTOMATIC' as const,
+      fuelType: 'PETROL' as const,
+      seats: 5,
+      colour: 'White',
+      odometer: 84200,
+      acquisitionCost: '12000.00',
+    },
+    {
+      id: 'seed-veh-2',
+      plateNumber: 'MOG-2087',
+      vin: 'JN8AZ2NF1J9540021',
+      make: 'Nissan',
+      model: 'Patrol',
+      year: 2021,
+      category: 'SUV',
+      transmission: 'AUTOMATIC' as const,
+      fuelType: 'DIESEL' as const,
+      seats: 7,
+      colour: 'Black',
+      odometer: 45120,
+      acquisitionCost: '38000.00',
+    },
+  ];
+
+  for (const veh of vehicles) {
+    await prisma.vehicle.upsert({
+      where: { id: veh.id },
+      update: {},
+      create: {
+        ...veh,
+        organizationId: org.id,
+        branchId: mainBranch.id,
+        acquisitionDate: new Date('2022-01-15'),
+      },
+    });
+  }
+
   // eslint-disable-next-line no-console
   console.log('Seed complete. Login with owner@hosni.test / ChangeMe123!');
 }

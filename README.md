@@ -61,6 +61,11 @@ npm run typecheck && npm run lint && npm run test && npm run build
 - **Module 1 — Authentication & staff accounts:** ✅ login/refresh/logout/me,
   refresh rotation with grace window, login rate limiting by IP and account,
   role middleware, user CRUD + deactivation (last-owner guarded), audit log.
-- Remaining modules (fleet, customers, pricing, reservations, agreements,
-  invoicing, maintenance, expenses, alerts, reports) are scaffolded in the
-  navigation and built in order.
+- **Module 2 — Fleet & vehicles:** ✅ vehicle CRUD with derived status,
+  OUT_OF_SERVICE override, monotonic odometer with manager override + audit,
+  soft delete, documents with expiry, up to 10 photos via signed URLs (local +
+  S3 storage adapters), list filters (search / status / branch / documents
+  expiring), branch list endpoint. Detail tabs for rentals, maintenance,
+  damages, expenses and profitability are stubbed until their modules land.
+- Remaining modules (customers, pricing, reservations, agreements, invoicing,
+  maintenance, expenses, alerts, reports) are built in order.

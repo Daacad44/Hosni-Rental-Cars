@@ -35,6 +35,18 @@ const envSchema = z.object({
   COOKIE_DOMAIN: z.string().optional(),
   // Number of proxies in front of the app, for express `trust proxy`.
   TRUST_PROXY_HOPS: z.coerce.number().int().nonnegative().default(1),
+
+  // Object storage. 'local' writes to disk for development; 's3' targets an
+  // S3-compatible private bucket in production, served via signed URLs only.
+  STORAGE_DRIVER: z.enum(['local', 's3']).default('local'),
+  UPLOAD_DIR: z.string().default('./uploads'),
+  UPLOAD_MAX_BYTES: z.coerce.number().int().positive().default(10 * 1024 * 1024),
+  SIGNED_URL_TTL_SEC: z.coerce.number().int().positive().default(300),
+  S3_BUCKET: z.string().optional(),
+  S3_REGION: z.string().optional(),
+  S3_ENDPOINT: z.string().url().optional(),
+  S3_ACCESS_KEY_ID: z.string().optional(),
+  S3_SECRET_ACCESS_KEY: z.string().optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;

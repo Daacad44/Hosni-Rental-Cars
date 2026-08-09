@@ -5,6 +5,9 @@ import { RequireAuth, RequireRole } from './RequireAuth';
 const LoginPage = lazy(() => import('../features/auth/LoginPage'));
 const DashboardPage = lazy(() => import('../features/dashboard/DashboardPage'));
 const UsersPage = lazy(() => import('../features/users/UsersPage'));
+const FleetListPage = lazy(() => import('../features/fleet/FleetListPage'));
+const VehicleFormPage = lazy(() => import('../features/fleet/VehicleFormPage'));
+const VehicleDetailPage = lazy(() => import('../features/fleet/VehicleDetailPage'));
 const PlaceholderPage = lazy(() => import('../routes/PlaceholderPage'));
 
 function Lazy({ children }: { children: ReactNode }) {
@@ -25,7 +28,10 @@ export const router = createBrowserRouter([
     children: [
       { index: true, element: <Navigate to="/dashboard" replace /> },
       { path: 'dashboard', element: <Lazy><DashboardPage /></Lazy> },
-      { path: 'fleet', element: placeholder('nav.fleet') },
+      { path: 'fleet', element: <Lazy><FleetListPage /></Lazy> },
+      { path: 'fleet/new', element: <Lazy><VehicleFormPage /></Lazy> },
+      { path: 'fleet/:id', element: <Lazy><VehicleDetailPage /></Lazy> },
+      { path: 'fleet/:id/edit', element: <Lazy><VehicleFormPage /></Lazy> },
       { path: 'reservations', element: placeholder('nav.reservations') },
       { path: 'rentals', element: placeholder('nav.rentals') },
       { path: 'customers', element: placeholder('nav.customers') },

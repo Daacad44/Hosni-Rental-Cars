@@ -37,6 +37,7 @@ model Organization {
   branches  Branch[]
   users     User[]
   auditLogs AuditLog[]
+  vehicles  Vehicle[]
 }
 
 model Branch {
@@ -48,7 +49,8 @@ model Branch {
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
 
-  users User[]
+  users    User[]
+  vehicles Vehicle[]
 
   @@index([organizationId])
 }
@@ -112,4 +114,107 @@ model AuditLog {
 
   @@index([organizationId, entityType, entityId])
   @@index([organizationId, createdAt])
+}
+
+// ── Module 2: Fleet & vehicles ──────────────────────────────────────────────
+
+enum Transmission {
+  MANUAL
+  AUTOMATIC
+}
+
+enum FuelType {
+  PETROL
+  DIESEL
+  HYBRID
+  ELECTRIC
+}
+
+enum VehicleDocumentType {
+  INSURANCE
+  REGISTRATION
+  INSPECTION
+  PERMIT
+}
+
+model Vehicle {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  branchId       String
+  branch         Branch       @relation(fields: [branchId], references: [id])
+
+  plateNumber  String
+  vin          String
+  make         String
+  model        String
+  year         Int
+  // Category is organization-defined free text; rate cards key on it.
+  category     String
+  transmission Transmission
+  fuelType     FuelType
+  seats        Int
+  colour       String
+  // Odometer in kilometres. Monotonic: a lower reading needs a manager override.
+  odometer     Int          @default(0)
+
+  acquisitionCost Decimal  @db.Decimal(12, 2)
+  acquisitionDate DateTime
+
+  // The only manual status override (§5.2). All other states are derived from
+  // active agreements, reservations, and open maintenance at read time.
+  isOutOfService     Boolean @default(false)
+  outOfServiceReason String?
+
+  // Soft delete: hidden from lists, retained on historical agreements.
+  deletedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  photos    VehiclePhoto[]
+  documents VehicleDocument[]
+
+  // Plate is unique per organization among live rows. Enforced by a partial
+  // unique index (WHERE deletedAt IS NULL) added in the migration, so a plate
+  // can be reused after a vehicle is soft-deleted.
+  @@index([organizationId, plateNumber])
+  @@index([organizationId])
+  @@index([organizationId, branchId])
+  @@index([organizationId, category])
+}
+
+model VehiclePhoto {
+  id             String   @id @default(cuid())
+  organizationId String
+  vehicleId      String
+  vehicle        Vehicle  @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  // Object-storage key in the private bucket; served only via signed URLs.
+  storageKey     String
+  contentType    String
+  sizeBytes      Int
+  position       Int      @default(0)
+  createdAt      DateTime @default(now())
+
+  @@index([vehicleId])
+  @@index([organizationId])
+}
+
+model VehicleDocument {
+  id             String              @id @default(cuid())
+  organizationId String
+  vehicleId      String
+  vehicle        Vehicle             @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  type           VehicleDocumentType
+  number         String
+  issueDate      DateTime
+  // Indexed: a nightly job scans it for upcoming expiry (built in the alerts module).
+  expiryDate     DateTime
+  storageKey     String?
+  contentType    String?
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+
+  @@index([vehicleId])
+  @@index([organizationId, expiryDate])
 }

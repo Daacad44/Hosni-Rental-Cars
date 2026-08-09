@@ -12,3 +12,4 @@ frontend/dist/
 backend/dist/
 packages/shared/dist/
 .vite/
+backend/uploads/

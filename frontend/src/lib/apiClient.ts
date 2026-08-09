@@ -88,4 +88,36 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
   return json as ApiSuccess<T>;
 }
 
+/**
+ * Multipart upload — the one exception to JSON bodies, still routed through the
+ * single client so components never touch `fetch` directly. Refresh-on-401 is
+ * applied the same way.
+ */
+export async function apiUpload<T>(path: string, formData: FormData): Promise<ApiSuccess<T>> {
+  const url = `${BASE_URL}${path}`;
+  const doFetch = () => fetch(url, { method: 'POST', credentials: 'include', body: formData });
+
+  let res = await doFetch();
+  if (res.status === 401) {
+    try {
+      await refreshSession();
+      res = await doFetch();
+    } catch {
+      throw new ApiError('UNAUTHORIZED', 'Session expired', 401);
+    }
+  }
+
+  const text = await res.text();
+  const json = text ? (JSON.parse(text) as unknown) : null;
+  if (!res.ok) {
+    const err = json as ApiErrorBody | null;
+    throw new ApiError(
+      err?.error?.code ?? 'INTERNAL_ERROR',
+      err?.error?.message ?? 'Upload failed',
+      res.status,
+    );
+  }
+  return json as ApiSuccess<T>;
+}
+
 export type { PaginationMeta };
