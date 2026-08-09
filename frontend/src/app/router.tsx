@@ -8,6 +8,9 @@ const UsersPage = lazy(() => import('../features/users/UsersPage'));
 const FleetListPage = lazy(() => import('../features/fleet/FleetListPage'));
 const VehicleFormPage = lazy(() => import('../features/fleet/VehicleFormPage'));
 const VehicleDetailPage = lazy(() => import('../features/fleet/VehicleDetailPage'));
+const CustomerListPage = lazy(() => import('../features/customers/CustomerListPage'));
+const CustomerFormPage = lazy(() => import('../features/customers/CustomerFormPage'));
+const CustomerDetailPage = lazy(() => import('../features/customers/CustomerDetailPage'));
 const PlaceholderPage = lazy(() => import('../routes/PlaceholderPage'));
 
 function Lazy({ children }: { children: ReactNode }) {
@@ -34,7 +37,10 @@ export const router = createBrowserRouter([
       { path: 'fleet/:id/edit', element: <Lazy><VehicleFormPage /></Lazy> },
       { path: 'reservations', element: placeholder('nav.reservations') },
       { path: 'rentals', element: placeholder('nav.rentals') },
-      { path: 'customers', element: placeholder('nav.customers') },
+      { path: 'customers', element: <Lazy><CustomerListPage /></Lazy> },
+      { path: 'customers/new', element: <Lazy><CustomerFormPage /></Lazy> },
+      { path: 'customers/:id', element: <Lazy><CustomerDetailPage /></Lazy> },
+      { path: 'customers/:id/edit', element: <Lazy><CustomerFormPage /></Lazy> },
       { path: 'invoices', element: placeholder('nav.invoices') },
       { path: 'maintenance', element: placeholder('nav.maintenance') },
       { path: 'expenses', element: placeholder('nav.expenses') },

@@ -38,6 +38,7 @@ model Organization {
   users     User[]
   auditLogs AuditLog[]
   vehicles  Vehicle[]
+  customers Customer[]
 }
 
 model Branch {
@@ -217,4 +218,42 @@ model VehicleDocument {
 
   @@index([vehicleId])
   @@index([organizationId, expiryDate])
+}
+
+// ── Module 3: Customers ─────────────────────────────────────────────────────
+
+model Customer {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  fullName      String
+  phone         String
+  email         String?
+  nationalId    String?
+  licenceNumber String?
+  licenceExpiry DateTime?
+  address       String?
+  notes         String?
+
+  // Scans held in the private bucket, served via signed URLs only.
+  licenceScanKey String?
+  idScanKey      String?
+
+  isBlocked   Boolean   @default(false)
+  blockReason String?
+  blockedAt   DateTime?
+  blockedById String?
+
+  // Duplicate merge is a soft delete of the losing record onto the winner.
+  mergedIntoId String?
+  deletedAt    DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Phone is unique per organization among live rows (partial index in migration).
+  @@index([organizationId])
+  @@index([organizationId, phone])
+  // A GIN trigram index on fullName is added in the migration for forgiving search.
 }
