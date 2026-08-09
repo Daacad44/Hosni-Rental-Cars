@@ -9,3 +9,5 @@ export * from './schemas/reservation.js';
 export * from './schemas/settlement.js';
 export * from './schemas/invoice.js';
 export * from './schemas/agreement.js';
+export * from './schemas/upkeep.js';
+export * from './schemas/reports.js';

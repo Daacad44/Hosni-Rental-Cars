@@ -67,5 +67,23 @@ npm run typecheck && npm run lint && npm run test && npm run build
   S3 storage adapters), list filters (search / status / branch / documents
   expiring), branch list endpoint. Detail tabs for rentals, maintenance,
   damages, expenses and profitability are stubbed until their modules land.
-- Remaining modules (customers, pricing, reservations, agreements, invoicing,
-  maintenance, expenses, alerts, reports) are built in order.
+- **Module 3 — Customers:** ✅ CRUD, forgiving trigram search, block/unblock,
+  licence-expiry guard, manager-only merge.
+- **Module 4 — Pricing & rate cards:** ✅ pure, exhaustively-tested pricing
+  service; rate cards with effective-dating and vehicle overrides; quotes.
+- **Module 5 — Reservations:** ✅ transactional availability with a DB exclusion
+  constraint, status flow, stored quote, calendar.
+- **Modules 6-8 — Agreements, inspections, invoicing:** ✅ check-out/check-in
+  wizards, pure settlement, gapless numbers, idempotent payments, void, cash
+  summary.
+- **Module 9 — Maintenance:** ✅ scheduling that blocks availability, completion
+  computing next-due, severe-damage auto-scheduling.
+- **Module 10 — Expenses & fines:** ✅ expenses with CSV export, fines that
+  suggest the active agreement and charge to a customer's invoice.
+- **Module 11 — Alerts & jobs:** ✅ BullMQ worker running idempotent document-
+  expiry, overdue, service-due, no-show, and cleanup jobs.
+- **Module 12 — Dashboard & reports:** ✅ KPI dashboard with alert panel;
+  revenue, profitability, outstanding and overdue reports with chart + table +
+  CSV, aggregated in SQL.
+
+Run the worker alongside the API: `cd backend && npm run worker`.

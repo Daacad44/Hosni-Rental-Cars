@@ -37,6 +37,11 @@ model Organization {
   fuelChargePerEighth Decimal @default(5.00) @db.Decimal(12, 2)
   // Hours after pickup before a confirmed reservation is released as NO_SHOW.
   noShowHours Int @default(4)
+  // Service interval and "due soon" thresholds for maintenance.
+  serviceIntervalKm    Int @default(5000)
+  serviceIntervalDays  Int @default(180)
+  serviceThresholdKm   Int @default(500)
+  serviceThresholdDays Int @default(14)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -50,6 +55,10 @@ model Organization {
   agreements Agreement[]
   invoices   Invoice[]
   counters   Counter[]
+  maintenance Maintenance[]
+  expenses    Expense[]
+  fines       TrafficFine[]
+  alerts      Alert[]
 }
 
 model Branch {
@@ -547,4 +556,119 @@ model Payment {
   @@unique([organizationId, idempotencyKey])
   @@index([invoiceId])
   @@index([organizationId, createdAt])
+}
+
+// ── Module 9: Maintenance ───────────────────────────────────────────────────
+
+enum MaintenanceStatus {
+  SCHEDULED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+model Maintenance {
+  id             String            @id @default(cuid())
+  organizationId String
+  organization   Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  vehicleId      String
+  type           String
+  status         MaintenanceStatus @default(SCHEDULED)
+
+  // The window this record blocks the vehicle for.
+  scheduledStart DateTime
+  scheduledEnd   DateTime
+
+  odometer Int?
+  vendor   String?
+  // Cost is read into cost reporting; never copied into the expense table.
+  cost     Decimal? @db.Decimal(12, 2)
+  notes    String?
+
+  nextDueAt       DateTime?
+  nextDueOdometer Int?
+  completedAt     DateTime?
+
+  createdById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([organizationId, status])
+  @@index([vehicleId, status])
+  @@index([organizationId, scheduledStart])
+}
+
+// ── Module 10: Expenses & traffic fines ─────────────────────────────────────
+
+enum ExpenseCategory {
+  FUEL
+  INSURANCE
+  FINE
+  SALARY
+  PARTS
+  PERMIT
+  OTHER
+}
+
+model Expense {
+  id             String          @id @default(cuid())
+  organizationId String
+  organization   Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  branchId       String?
+  vehicleId      String?
+  category       ExpenseCategory
+  amount         Decimal         @db.Decimal(12, 2)
+  date           DateTime
+  description    String?
+  receiptKey     String?
+  createdById    String?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  @@index([organizationId, category])
+  @@index([organizationId, date])
+  @@index([organizationId, vehicleId])
+  @@index([organizationId, branchId])
+}
+
+model TrafficFine {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  noticeNumber   String
+  offenceAt      DateTime
+  location       String
+  amount         Decimal      @db.Decimal(12, 2)
+  vehicleId      String?
+  // The agreement active on that vehicle at the offence moment (suggested).
+  agreementId    String?
+  customerCharged Boolean     @default(false)
+  invoiceId      String?
+  notes          String?
+  createdById    String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@index([organizationId, offenceAt])
+  @@index([organizationId, vehicleId])
+}
+
+// ── Module 11: Alerts ───────────────────────────────────────────────────────
+
+model Alert {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  type           String
+  entityType     String
+  entityId       String
+  // Date-only bucket so a repeated run does not raise a duplicate alert.
+  raisedOn       DateTime
+  message        String
+  resolvedAt     DateTime?
+  createdAt      DateTime     @default(now())
+
+  // Prevents an alert storm after a worker outage.
+  @@unique([organizationId, type, entityId, raisedOn])
+  @@index([organizationId, resolvedAt])
 }

@@ -23,17 +23,13 @@ const CheckinWizard = lazy(() => import('../features/agreements/CheckinWizard'))
 const InvoiceListPage = lazy(() => import('../features/invoices/InvoiceListPage'));
 const InvoiceDetailPage = lazy(() => import('../features/invoices/InvoiceDetailPage'));
 const CashSummaryPage = lazy(() => import('../features/invoices/CashSummaryPage'));
-const PlaceholderPage = lazy(() => import('../routes/PlaceholderPage'));
+const MaintenancePage = lazy(() => import('../features/maintenance/MaintenancePage'));
+const ExpensesPage = lazy(() => import('../features/expenses/ExpensesPage'));
+const ReportsPage = lazy(() => import('../features/reports/ReportsPage'));
 
 function Lazy({ children }: { children: ReactNode }) {
   return <Suspense fallback={<div className="p-6 text-sm text-muted">…</div>}>{children}</Suspense>;
 }
-
-const placeholder = (titleKey: string) => (
-  <Lazy>
-    <PlaceholderPage titleKey={titleKey} />
-  </Lazy>
-);
 
 export const router = createBrowserRouter([
   { path: '/login', element: <Lazy><LoginPage /></Lazy> },
@@ -62,12 +58,28 @@ export const router = createBrowserRouter([
       { path: 'invoices', element: <Lazy><InvoiceListPage /></Lazy> },
       { path: 'invoices/cash-summary', element: <Lazy><CashSummaryPage /></Lazy> },
       { path: 'invoices/:id', element: <Lazy><InvoiceDetailPage /></Lazy> },
-      { path: 'maintenance', element: placeholder('nav.maintenance') },
-      { path: 'expenses', element: placeholder('nav.expenses') },
+      {
+        path: 'maintenance',
+        element: (
+          <RequireRole allow={['OWNER', 'MANAGER', 'MECHANIC']}>
+            <Lazy><MaintenancePage /></Lazy>
+          </RequireRole>
+        ),
+      },
+      {
+        path: 'expenses',
+        element: (
+          <RequireRole allow={['OWNER', 'MANAGER']}>
+            <Lazy><ExpensesPage /></Lazy>
+          </RequireRole>
+        ),
+      },
       {
         path: 'reports',
         element: (
-          <RequireRole allow={['OWNER', 'MANAGER']}>{placeholder('nav.reports')}</RequireRole>
+          <RequireRole allow={['OWNER', 'MANAGER']}>
+            <Lazy><ReportsPage /></Lazy>
+          </RequireRole>
         ),
       },
       {

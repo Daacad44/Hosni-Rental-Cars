@@ -420,6 +420,23 @@ export async function checkin(actor: AuthContext, id: string, input: CheckinRequ
       createdById: actor.id,
     });
 
+    // New SEVERE damage schedules maintenance automatically (§5.7).
+    const severe = input.inspection.damages.filter((d) => d.severity === 'SEVERE');
+    if (severe.length > 0) {
+      const now = new Date();
+      await tx.maintenance.create({
+        data: {
+          organizationId: actor.organizationId,
+          vehicleId: agreement.vehicleId,
+          type: 'DAMAGE_REPAIR',
+          status: 'SCHEDULED',
+          scheduledStart: now,
+          scheduledEnd: new Date(now.getTime() + 86400000),
+          notes: `Auto-scheduled from severe damage at check-in of agreement #${agreement.agreementNumber}`,
+        },
+      });
+    }
+
     await tx.agreement.update({
       where: { id: agreement.id },
       data: {

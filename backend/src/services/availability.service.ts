@@ -53,8 +53,17 @@ export async function assertVehicleFree(
   });
   if (openAgreement) throw new AppError('VEHICLE_UNAVAILABLE', 'The vehicle is on an open rental for this period');
 
-  // Extension point: the maintenance module rejects on an overlapping
-  // scheduled maintenance window here.
+  const maintenance = await tx.maintenance.findFirst({
+    where: {
+      organizationId: params.organizationId,
+      vehicleId: params.vehicleId,
+      status: { in: ['SCHEDULED', 'IN_PROGRESS'] },
+      scheduledStart: { lt: params.endAt },
+      scheduledEnd: { gt: params.startAt },
+    },
+    select: { id: true },
+  });
+  if (maintenance) throw new AppError('VEHICLE_UNAVAILABLE', 'The vehicle is scheduled for maintenance in this period');
 }
 
 /** Postgres exclusion-violation code, mapped to OVERLAPPING_RESERVATION. */
