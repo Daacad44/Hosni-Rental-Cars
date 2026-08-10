@@ -47,10 +47,15 @@ ALTER TABLE "Reservation" ADD CONSTRAINT "Reservation_organizationId_fkey" FOREI
 -- two simultaneous confirmations resolve to exactly one winner, the other
 -- fails with an exclusion violation mapped to OVERLAPPING_RESERVATION.
 CREATE EXTENSION IF NOT EXISTS btree_gist;
+-- startAt/endAt are `timestamp without time zone`, so the range must be built
+-- with tsrange, not tstzrange: tstzrange(timestamp, timestamp) depends on the
+-- session TimeZone to cast its arguments and is therefore NOT immutable, which
+-- Postgres rejects in an index expression ("functions in index expression must
+-- be marked IMMUTABLE"). tsrange over the same columns is immutable.
 ALTER TABLE "Reservation"
   ADD CONSTRAINT "Reservation_no_overlap"
   EXCLUDE USING gist (
     "vehicleId" WITH =,
-    tstzrange("startAt", "endAt") WITH &&
+    tsrange("startAt", "endAt") WITH &&
   )
   WHERE (status IN ('CONFIRMED', 'CONVERTED') AND "vehicleId" IS NOT NULL);
