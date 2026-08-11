@@ -7,6 +7,7 @@ import type {
   CreateVehicleDocumentRequest,
   OdometerUpdateRequest,
   OutOfServiceRequest,
+  DamageView,
 } from '@hosni/shared';
 import { apiRequest, apiUpload } from '../../lib/apiClient';
 
@@ -55,6 +56,10 @@ export const fleetApi = {
     apiRequest<VehicleDocumentView>(`/vehicles/${id}/documents`, { method: 'POST', body }),
   deleteDocument: (id: string, documentId: string) =>
     apiRequest<{ success: boolean }>(`/vehicles/${id}/documents/${documentId}`, { method: 'DELETE' }),
+
+  listDamages: (id: string) => apiRequest<DamageView[]>(`/vehicles/${id}/damages`),
+  repairDamage: (id: string, damageId: string) =>
+    apiRequest<DamageView>(`/vehicles/${id}/damages/${damageId}/repair`, { method: 'POST' }),
 
   listPhotos: (id: string) => apiRequest<PhotoView[]>(`/vehicles/${id}/photos`),
   uploadPhoto: (id: string, file: File) => {

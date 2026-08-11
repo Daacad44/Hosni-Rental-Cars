@@ -569,6 +569,8 @@ export async function listAgreements(
     organizationId: actor.organizationId,
     ...(scopedBranch ? { branchId: scopedBranch } : {}),
     ...(filters.status ? { status: filters.status } : {}),
+    ...(filters.vehicleId ? { vehicleId: filters.vehicleId } : {}),
+    ...(filters.customerId ? { customerId: filters.customerId } : {}),
   };
   const [rows, total] = await Promise.all([
     prisma.agreement.findMany({

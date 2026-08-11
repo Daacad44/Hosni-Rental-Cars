@@ -6,8 +6,8 @@ import type {
 import { apiRequest } from '../../lib/apiClient';
 
 export const maintenanceApi = {
-  list: (status: string | undefined, page: number, pageSize: number) =>
-    apiRequest<MaintenanceView[]>('/maintenance', { query: { status, page, pageSize } }),
+  list: (status: string | undefined, page: number, pageSize: number, vehicleId?: string) =>
+    apiRequest<MaintenanceView[]>('/maintenance', { query: { status, vehicleId, page, pageSize } }),
   create: (body: CreateMaintenanceRequest) =>
     apiRequest<MaintenanceView>('/maintenance', { method: 'POST', body }),
   updateStatus: (id: string, body: UpdateMaintenanceStatusRequest) =>

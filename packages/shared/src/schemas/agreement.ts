@@ -108,6 +108,8 @@ export type CorrectInspectionRequest = z.infer<typeof correctInspectionSchema>;
 export const agreementFiltersSchema = z.object({
   status: agreementStatusSchema.optional(),
   branchId: z.string().optional(),
+  vehicleId: z.string().optional(),
+  customerId: z.string().optional(),
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(100).default(20),
 });
