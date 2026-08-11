@@ -3,6 +3,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { INVOICE_STATUSES } from '@hosni/shared';
 import { useInvoices } from './hooks';
+import { useBranchScope } from '../../app/BranchScope';
 import { InvoiceStatusBadge } from './InvoiceStatusBadge';
 import { Button } from '../../components/ui/Button';
 import { SelectField } from '../../components/ui/SelectField';
@@ -17,8 +18,12 @@ export default function InvoiceListPage() {
   const [params, setParams] = useSearchParams();
   const status = params.get('status') ?? '';
   const page = Number(params.get('page') ?? '1');
+  const { branchId } = useBranchScope();
 
-  const query = useMemo(() => ({ status: status || undefined, page, pageSize: PAGE_SIZE }), [status, page]);
+  const query = useMemo(
+    () => ({ status: status || undefined, branchId: branchId || undefined, page, pageSize: PAGE_SIZE }),
+    [status, branchId, page],
+  );
   const invoicesQuery = useInvoices(query);
   const rows = invoicesQuery.data?.data ?? [];
   const total = invoicesQuery.data?.meta?.total ?? 0;

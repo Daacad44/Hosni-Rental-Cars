@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Plus } from 'lucide-react';
 import { RESERVATION_STATUSES } from '@hosni/shared';
 import { useReservations } from './hooks';
+import { useBranchScope } from '../../app/BranchScope';
 import { ReservationStatusBadge } from './ReservationStatusBadge';
 import { Button } from '../../components/ui/Button';
 import { SelectField } from '../../components/ui/SelectField';
@@ -18,10 +19,11 @@ export default function ReservationListPage() {
   const [params, setParams] = useSearchParams();
   const status = params.get('status') ?? '';
   const page = Number(params.get('page') ?? '1');
+  const { branchId } = useBranchScope();
 
   const query = useMemo(
-    () => ({ status: status || undefined, page, pageSize: PAGE_SIZE }),
-    [status, page],
+    () => ({ status: status || undefined, branchId: branchId || undefined, page, pageSize: PAGE_SIZE }),
+    [status, branchId, page],
   );
   const reservationsQuery = useReservations(query);
   const rows = reservationsQuery.data?.data ?? [];
