@@ -11,6 +11,8 @@ import type {
   RateValues,
   SettlementResult,
   InspectionChecklist,
+  InspectionView,
+  CorrectInspectionRequest,
   DamageInput,
 } from '@hosni/shared';
 import { prisma } from '../lib/prisma.js';
@@ -87,8 +89,9 @@ async function createInspection(
     photoKeys: string[];
     damages: DamageInput[];
     createdById: string;
+    supersedesId?: string;
   },
-): Promise<void> {
+): Promise<string> {
   const inspection = await db.inspection.create({
     data: {
       organizationId: params.organizationId,
@@ -99,6 +102,7 @@ async function createInspection(
       checklist: params.checklist as unknown as Prisma.InputJsonValue,
       notes: params.notes ?? null,
       signatureKey: params.signatureKey ?? null,
+      supersedesId: params.supersedesId ?? null,
       createdById: params.createdById,
     },
   });
@@ -128,6 +132,7 @@ async function createInspection(
       })),
     });
   }
+  return inspection.id;
 }
 
 export async function checkout(actor: AuthContext, input: CheckoutRequest): Promise<AgreementDetail> {
@@ -558,6 +563,102 @@ export async function getAgreement(actor: AuthContext, id: string): Promise<Agre
     preExistingDamages: pre,
     newDamages: neu,
   };
+}
+
+function toInspectionView(
+  i: {
+    id: string;
+    type: 'CHECKOUT' | 'CHECKIN';
+    odometer: number;
+    fuelEighths: number;
+    checklist: Prisma.JsonValue;
+    notes: string | null;
+    signatureKey: string | null;
+    supersedesId: string | null;
+    createdAt: Date;
+    _count: { photos: number };
+  },
+  supersededIds: Set<string>,
+): InspectionView {
+  return {
+    id: i.id,
+    type: i.type,
+    odometer: i.odometer,
+    fuelEighths: i.fuelEighths,
+    checklist: i.checklist as unknown as InspectionChecklist,
+    notes: i.notes,
+    hasSignature: i.signatureKey !== null,
+    photoCount: i._count.photos,
+    supersedesId: i.supersedesId,
+    superseded: supersededIds.has(i.id),
+    createdAt: i.createdAt.toISOString(),
+  };
+}
+
+export async function listInspections(actor: AuthContext, id: string): Promise<InspectionView[]> {
+  const agreement = await loadAgreementRow(actor, id);
+  const inspections = await prisma.inspection.findMany({
+    where: { agreementId: agreement.id, organizationId: actor.organizationId },
+    orderBy: { createdAt: 'asc' },
+    include: { _count: { select: { photos: true } } },
+  });
+  // An inspection is superseded when a later record references it.
+  const supersededIds = new Set(
+    inspections.map((i) => i.supersedesId).filter((v): v is string => v !== null),
+  );
+  return inspections.map((i) => toInspectionView(i, supersededIds));
+}
+
+/**
+ * Correct an inspection (§5.7). Append-only: this NEVER edits the original. It
+ * writes a brand-new inspection of the same type that references the original
+ * via supersedesId, carrying the corrected readings, checklist, notes,
+ * signature, photos and damage. The original stays on the record; the history
+ * is preserved and audit-logged.
+ */
+export async function correctInspection(
+  actor: AuthContext,
+  agreementId: string,
+  inspectionId: string,
+  input: CorrectInspectionRequest,
+): Promise<InspectionView[]> {
+  const agreement = await loadAgreementRow(actor, agreementId);
+  const original = await prisma.inspection.findFirst({
+    where: { id: inspectionId, agreementId: agreement.id, organizationId: actor.organizationId },
+  });
+  if (!original) throw notFound('Inspection not found');
+
+  await prisma.$transaction(async (tx) => {
+    const newId = await createInspection(tx, {
+      organizationId: actor.organizationId,
+      agreementId: agreement.id,
+      vehicleId: agreement.vehicleId,
+      type: original.type,
+      odometer: input.inspection.odometer,
+      fuelEighths: input.inspection.fuelEighths,
+      checklist: input.inspection.checklist,
+      notes: input.inspection.notes,
+      signatureKey: input.inspection.signatureKey,
+      photoKeys: input.inspection.photoKeys,
+      damages: input.inspection.damages,
+      createdById: actor.id,
+      supersedesId: original.id,
+    });
+    await writeAudit(
+      {
+        organizationId: actor.organizationId,
+        actorId: actor.id,
+        action: 'INSPECTION_CORRECTED',
+        entityType: 'Inspection',
+        entityId: newId,
+        before: { supersedesId: original.id, type: original.type },
+        after: { reason: input.reason },
+      },
+      tx,
+    );
+  });
+
+  return listInspections(actor, agreementId);
 }
 
 export async function listAgreements(

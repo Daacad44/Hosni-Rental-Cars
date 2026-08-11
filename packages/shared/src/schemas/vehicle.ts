@@ -148,3 +148,68 @@ export interface VehicleDocumentView {
   hasFile: boolean;
   daysUntilExpiry: number;
 }
+
+// ── Vehicle detail tabs (§5.2) ──────────────────────────────────────────────
+
+/** A window in which the vehicle is (or will be) unavailable. */
+export interface VehicleAvailabilityEntry {
+  kind: 'RESERVATION' | 'AGREEMENT' | 'MAINTENANCE';
+  id: string;
+  label: string;
+  status: string;
+  startAt: string;
+  endAt: string;
+}
+
+export interface VehicleAvailability {
+  status: VehicleStatus;
+  entries: VehicleAvailabilityEntry[];
+}
+
+export interface VehicleRentalRow {
+  id: string;
+  agreementNumber: number;
+  customerName: string;
+  startAt: string;
+  endAt: string;
+  status: 'OPEN' | 'OVERDUE' | 'CLOSED';
+}
+
+export interface VehicleMaintenanceRow {
+  id: string;
+  type: string;
+  status: 'SCHEDULED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
+  scheduledStart: string;
+  scheduledEnd: string;
+  vendor: string | null;
+  cost: string | null;
+  completedAt: string | null;
+}
+
+export interface VehicleDamageRow {
+  id: string;
+  panel: string;
+  severity: 'MINOR' | 'MODERATE' | 'SEVERE';
+  notes: string | null;
+  chargeable: boolean;
+  chargeAmount: string | null;
+  repairedAt: string | null;
+  createdAt: string;
+  agreementId: string | null;
+  agreementNumber: number | null;
+}
+
+export interface VehicleExpenseRow {
+  id: string;
+  category: string;
+  amount: string;
+  date: string;
+  description: string | null;
+}
+
+export interface VehicleProfitability {
+  revenue: string;
+  expenses: string;
+  maintenance: string;
+  profit: string;
+}

@@ -4,6 +4,7 @@ import {
   checkinSchema,
   extendAgreementSchema,
   agreementFiltersSchema,
+  correctInspectionSchema,
 } from '@hosni/shared';
 import * as agreements from '../controllers/agreements.controller.js';
 import { authenticate, requireRole } from '../middleware/authenticate.js';
@@ -17,6 +18,13 @@ agreementRoutes.use(authenticate, requireRole('OWNER', 'MANAGER', 'AGENT'));
 
 agreementRoutes.get('/', validateQuery(agreementFiltersSchema), asyncHandler(agreements.list));
 agreementRoutes.get('/:id', asyncHandler(agreements.get));
+agreementRoutes.get('/:id/contract.pdf', asyncHandler(agreements.contractPdf));
+agreementRoutes.get('/:id/inspections', asyncHandler(agreements.listInspections));
+agreementRoutes.post(
+  '/:id/inspections/:inspectionId/correct',
+  validateBody(correctInspectionSchema),
+  asyncHandler(agreements.correctInspection),
+);
 agreementRoutes.post('/checkout', validateBody(checkoutSchema), asyncHandler(agreements.checkout));
 agreementRoutes.post(
   '/:id/settlement-preview',

@@ -5,6 +5,7 @@ import type {
   CustomerFilters,
   CustomerListItem,
   CustomerDetail,
+  CustomerStats,
 } from '@hosni/shared';
 import { prisma } from '../lib/prisma.js';
 import { AppError, notFound, conflict } from '../lib/AppError.js';
@@ -86,17 +87,63 @@ export async function listCustomers(
 }
 
 /**
- * Aggregate lifetime figures for a customer. Rentals, spend, outstanding
- * balance, damages and late returns are read from the agreements, invoices and
- * damage tables as those modules land; until then they report zero.
+ * Aggregate lifetime figures for a customer (§5.3), read straight from the
+ * agreements, invoices and damage tables:
+ *   - rentalCount:       every agreement the customer has held.
+ *   - totalSpend:        billed charges on their non-void invoices, excluding
+ *                        the held deposit and its refund (the app's revenue
+ *                        definition — deposits are never spend).
+ *   - outstandingBalance:the unpaid portion still owed across those invoices.
+ *   - damageCount:       damage recorded AT CHECK-IN on their agreements — i.e.
+ *                        attributed to the customer, never pre-existing damage.
+ *   - lateReturnCount:   agreements returned after the planned time, plus any
+ *                        still open past their due date.
  */
-async function customerStats(_organizationId: string, _customerId: string) {
+async function customerStats(
+  organizationId: string,
+  customerId: string,
+): Promise<CustomerStats> {
+  const agreements = await prisma.agreement.findMany({
+    where: { organizationId, customerId },
+    select: { id: true, endAt: true, closedAt: true, status: true },
+  });
+  const agreementIds = agreements.map((a) => a.id);
+  const lateReturnCount = agreements.filter(
+    (a) =>
+      (a.status === 'CLOSED' && a.closedAt !== null && a.closedAt.getTime() > a.endAt.getTime()) ||
+      a.status === 'OVERDUE',
+  ).length;
+
+  const [spendAgg, outstandingAgg, damageCount] = await Promise.all([
+    prisma.invoiceLine.aggregate({
+      _sum: { amount: true },
+      where: {
+        organizationId,
+        kind: { notIn: ['DEPOSIT', 'DEPOSIT_REFUND'] },
+        invoice: { is: { customerId, isVoid: false } },
+      },
+    }),
+    prisma.invoice.aggregate({
+      _sum: { balance: true },
+      where: { organizationId, customerId, isVoid: false, balance: { gt: 0 } },
+    }),
+    agreementIds.length > 0
+      ? prisma.damage.count({
+          where: {
+            organizationId,
+            agreementId: { in: agreementIds },
+            inspection: { is: { type: 'CHECKIN' } },
+          },
+        })
+      : Promise.resolve(0),
+  ]);
+
   return {
-    rentalCount: 0,
-    totalSpend: '0.00',
-    outstandingBalance: '0.00',
-    damageCount: 0,
-    lateReturnCount: 0,
+    rentalCount: agreements.length,
+    totalSpend: (spendAgg._sum.amount ?? new Prisma.Decimal(0)).toFixed(2),
+    outstandingBalance: (outstandingAgg._sum.balance ?? new Prisma.Decimal(0)).toFixed(2),
+    damageCount,
+    lateReturnCount,
   };
 }
 

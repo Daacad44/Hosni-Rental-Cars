@@ -5,6 +5,7 @@ import type {
   ProfitabilityRow,
   OutstandingRow,
   OverdueRow,
+  UtilizationRow,
 } from '@hosni/shared';
 import { prisma } from '../lib/prisma.js';
 import type { AuthContext } from '../middleware/authenticate.js';
@@ -119,6 +120,60 @@ export async function profitabilityReport(actor: AuthContext): Promise<Profitabi
       expenses: money(r.expenses),
       maintenance: money(r.maintenance),
       profit: profit.toFixed(2),
+    };
+  });
+}
+
+/**
+ * Fleet utilization over a window (§5.12). Utilization is rented days divided by
+ * AVAILABLE days, where available days are the days in the window the vehicle
+ * could have earned — the window MINUS the days it was in maintenance. A car in
+ * the workshop is not idle inventory, so excluding maintenance from the
+ * denominator stops the shop from being blamed for an unrentable car. A vehicle
+ * only counts from its acquisition date. Overlaps are clamped to the window; the
+ * aggregation is done in SQL, never in Node.
+ */
+export async function utilizationReport(actor: AuthContext, from: Date, to: Date): Promise<UtilizationRow[]> {
+  const rows = await prisma.$queryRaw<
+    Array<{ vehicleId: string; plateNumber: string; windowSecs: number; rentedSecs: number; maintSecs: number }>
+  >(Prisma.sql`
+    SELECT v."id" AS "vehicleId", v."plateNumber",
+      GREATEST(0, EXTRACT(EPOCH FROM (${to}::timestamp - GREATEST(${from}::timestamp, v."acquisitionDate"))))::float8 AS "windowSecs",
+      COALESCE((
+        SELECT SUM(EXTRACT(EPOCH FROM (
+          LEAST(COALESCE(a."closedAt", a."endAt"), ${to}::timestamp) - GREATEST(a."startAt", ${from}::timestamp)
+        )))
+        FROM "Agreement" a
+        WHERE a."vehicleId" = v."id"
+          AND a."startAt" < ${to}::timestamp
+          AND COALESCE(a."closedAt", a."endAt") > ${from}::timestamp
+      ), 0)::float8 AS "rentedSecs",
+      COALESCE((
+        SELECT SUM(EXTRACT(EPOCH FROM (
+          LEAST(m."scheduledEnd", ${to}::timestamp) - GREATEST(m."scheduledStart", ${from}::timestamp)
+        )))
+        FROM "Maintenance" m
+        WHERE m."vehicleId" = v."id"
+          AND m."status" <> 'CANCELLED'
+          AND m."scheduledStart" < ${to}::timestamp
+          AND m."scheduledEnd" > ${from}::timestamp
+      ), 0)::float8 AS "maintSecs"
+    FROM "Vehicle" v
+    WHERE v."organizationId" = ${actor.organizationId} AND v."deletedAt" IS NULL
+    ORDER BY v."plateNumber"
+  `);
+
+  const DAY = 86_400;
+  return rows.map((r) => {
+    const availableSecs = Math.max(0, r.windowSecs - r.maintSecs);
+    const rentedSecs = Math.min(r.rentedSecs, availableSecs);
+    const pct = availableSecs > 0 ? Math.round((rentedSecs / availableSecs) * 100) : 0;
+    return {
+      vehicleId: r.vehicleId,
+      plateNumber: r.plateNumber,
+      rentedDays: Math.round(r.rentedSecs / DAY),
+      availableDays: Math.round(availableSecs / DAY),
+      utilizationPct: Math.max(0, Math.min(100, pct)),
     };
   });
 }

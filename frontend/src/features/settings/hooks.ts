@@ -1,6 +1,18 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { RateCardRequest } from '@hosni/shared';
-import { rateCardsApi } from './api';
+import type { RateCardRequest, OrgSettingsRequest } from '@hosni/shared';
+import { rateCardsApi, organizationApi } from './api';
+
+export function useOrgSettings() {
+  return useQuery({ queryKey: ['org-settings'], queryFn: () => organizationApi.get() });
+}
+
+export function useUpdateOrgSettings() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: OrgSettingsRequest) => organizationApi.update(body),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['org-settings'] }),
+  });
+}
 
 export function useRateCards() {
   return useQuery({ queryKey: ['rate-cards'], queryFn: () => rateCardsApi.list() });

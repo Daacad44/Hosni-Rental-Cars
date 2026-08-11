@@ -6,8 +6,10 @@ import type {
   AgreementDetail,
   CheckinResult,
   SettlementResult,
+  InspectionView,
+  CorrectInspectionRequest,
 } from '@hosni/shared';
-import { apiRequest } from '../../lib/apiClient';
+import { apiRequest, apiFileUrl } from '../../lib/apiClient';
 
 export interface AgreementQuery {
   status?: string;
@@ -30,4 +32,8 @@ export const agreementsApi = {
     apiRequest<CheckinResult>(`/agreements/${id}/checkin`, { method: 'POST', body }),
   extend: (id: string, body: ExtendAgreementRequest) =>
     apiRequest<AgreementDetail>(`/agreements/${id}/extend`, { method: 'POST', body }),
+  inspections: (id: string) => apiRequest<InspectionView[]>(`/agreements/${id}/inspections`),
+  correctInspection: (id: string, inspectionId: string, body: CorrectInspectionRequest) =>
+    apiRequest<InspectionView[]>(`/agreements/${id}/inspections/${inspectionId}/correct`, { method: 'POST', body }),
+  contractPdfUrl: (id: string) => apiFileUrl(`/agreements/${id}/contract.pdf`),
 };

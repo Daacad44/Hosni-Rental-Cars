@@ -14,5 +14,7 @@ export interface StorageAdapter {
   put(key: string, body: Buffer, contentType: string): Promise<StoredObject>;
   /** A URL valid for a few minutes, after which the object is unreachable. */
   signedUrl(key: string, ttlSeconds: number): Promise<string>;
+  /** Read an object's bytes server-side (e.g. to embed a signature in a PDF). */
+  read(key: string): Promise<Buffer>;
   delete(key: string): Promise<void>;
 }

@@ -7,13 +7,21 @@ import { useVehicle, useVehicleMutation, useVehiclePhotos, usePhotoMutation } fr
 import { useAuth } from '../auth/hooks';
 import { VehicleStatusBadge } from './VehicleStatusBadge';
 import { VehicleDocumentsTab } from './VehicleDocumentsTab';
+import {
+  AvailabilityTab,
+  RentalsTab,
+  MaintenanceTab,
+  DamagesTab,
+  ExpensesTab,
+  ProfitabilityTab,
+} from './VehicleTabs';
 import { Button } from '../../components/ui/Button';
 import { TextField } from '../../components/ui/TextField';
 import { Modal } from '../../components/ui/Modal';
 import { Money } from '../../components/ui/Money';
 import { ErrorState } from '../../components/ui/states';
 
-const TABS = [
+const ALL_TABS = [
   'overview',
   'availability',
   'rentals',
@@ -23,7 +31,10 @@ const TABS = [
   'expenses',
   'profitability',
 ] as const;
-type Tab = (typeof TABS)[number];
+type Tab = (typeof ALL_TABS)[number];
+
+// The two money tabs are only for managers/owners (§2).
+const MANAGER_TABS: ReadonlySet<Tab> = new Set(['expenses', 'profitability']);
 
 export default function VehicleDetailPage() {
   const { t } = useTranslation();
@@ -31,6 +42,8 @@ export default function VehicleDetailPage() {
   const { id = '' } = useParams();
   const { data: me } = useAuth();
   const canEdit = me ? ['OWNER', 'MANAGER', 'MECHANIC'].includes(me.role) : false;
+  const isManager = me ? ['OWNER', 'MANAGER'].includes(me.role) : false;
+  const tabs = ALL_TABS.filter((tb) => isManager || !MANAGER_TABS.has(tb));
 
   const vehicleQuery = useVehicle(id);
   const [tab, setTab] = useState<Tab>('overview');
@@ -73,7 +86,7 @@ export default function VehicleDetailPage() {
 
       {/* Tab nav */}
       <div className="mb-4 flex gap-1 overflow-x-auto border-b border-border">
-        {TABS.map((tabKey) => (
+        {tabs.map((tabKey) => (
           <button
             key={tabKey}
             onClick={() => setTab(tabKey)}
@@ -91,12 +104,13 @@ export default function VehicleDetailPage() {
       </div>
 
       {tab === 'overview' && <OverviewTab vehicle={v} canEdit={canEdit} />}
+      {tab === 'availability' && <AvailabilityTab vehicleId={id} />}
+      {tab === 'rentals' && <RentalsTab vehicleId={id} />}
+      {tab === 'maintenance' && <MaintenanceTab vehicleId={id} />}
+      {tab === 'damages' && <DamagesTab vehicleId={id} canEdit={canEdit} />}
       {tab === 'documents' && <VehicleDocumentsTab vehicleId={id} canEdit={canEdit} />}
-      {tab !== 'overview' && tab !== 'documents' && (
-        <div className="rounded-md border border-border bg-surface p-8 text-center text-sm text-muted">
-          {t('common.comingSoon')}
-        </div>
-      )}
+      {tab === 'expenses' && isManager && <ExpensesTab vehicleId={id} />}
+      {tab === 'profitability' && isManager && <ProfitabilityTab vehicleId={id} />}
     </div>
   );
 }

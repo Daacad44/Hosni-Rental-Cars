@@ -83,6 +83,41 @@ export function useDocumentMutation(id: string) {
   };
 }
 
+export function useVehicleAvailability(id: string) {
+  return useQuery({ queryKey: ['vehicle', id, 'availability'], queryFn: () => fleetApi.availability(id) });
+}
+
+export function useVehicleRentals(id: string) {
+  return useQuery({ queryKey: ['vehicle', id, 'rentals'], queryFn: () => fleetApi.rentals(id) });
+}
+
+export function useVehicleMaintenance(id: string) {
+  return useQuery({ queryKey: ['vehicle', id, 'maintenance'], queryFn: () => fleetApi.maintenance(id) });
+}
+
+export function useVehicleDamages(id: string) {
+  return useQuery({ queryKey: ['vehicle', id, 'damages'], queryFn: () => fleetApi.damages(id) });
+}
+
+export function useRepairDamage(id: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (damageId: string) => fleetApi.repairDamage(id, damageId),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['vehicle', id, 'damages'] });
+      void qc.invalidateQueries({ queryKey: ['vehicle', id, 'availability'] });
+    },
+  });
+}
+
+export function useVehicleExpenses(id: string) {
+  return useQuery({ queryKey: ['vehicle', id, 'expenses'], queryFn: () => fleetApi.expenses(id) });
+}
+
+export function useVehicleProfitability(id: string) {
+  return useQuery({ queryKey: ['vehicle', id, 'profitability'], queryFn: () => fleetApi.profitability(id) });
+}
+
 export function useVehiclePhotos(id: string) {
   return useQuery({ queryKey: ['vehicle', id, 'photos'], queryFn: () => fleetApi.listPhotos(id) });
 }

@@ -35,6 +35,28 @@ export function principal(params: {
   };
 }
 
+/**
+ * A principal backed by a real User row — required whenever the code under test
+ * writes an audit log, since AuditLog.actorId has a foreign key to User.
+ */
+export async function makeUser(params: {
+  organizationId: string;
+  role: Role;
+  branchId?: string | null;
+}): Promise<TestUser> {
+  const user = await prisma.user.create({
+    data: {
+      organizationId: params.organizationId,
+      branchId: params.branchId ?? null,
+      name: `User ${uid()}`,
+      email: uid('email'),
+      passwordHash: 'x',
+      role: params.role,
+    },
+  });
+  return { id: user.id, organizationId: params.organizationId, branchId: params.branchId ?? null, role: params.role };
+}
+
 /** The Cookie header that authenticates a request as `user`, via a real JWT. */
 export function authCookie(user: TestUser): string {
   const token = signAccessToken({

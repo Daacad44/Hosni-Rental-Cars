@@ -19,3 +19,4 @@ reportRoutes.get('/revenue', asyncHandler(insights.revenue));
 reportRoutes.get('/profitability', asyncHandler(insights.profitability));
 reportRoutes.get('/outstanding', asyncHandler(insights.outstanding));
 reportRoutes.get('/overdue', asyncHandler(insights.overdue));
+reportRoutes.get('/utilization', asyncHandler(insights.utilization));

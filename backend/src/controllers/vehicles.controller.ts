@@ -7,6 +7,7 @@ import type {
   OutOfServiceRequest,
 } from '@hosni/shared';
 import * as vehicles from '../services/vehicles.service.js';
+import * as detail from '../services/vehicleDetail.service.js';
 import { ok, created } from '../lib/respond.js';
 import { requireUser } from '../middleware/authenticate.js';
 import { getValidatedQuery } from '../middleware/validate.js';
@@ -47,4 +48,34 @@ export async function remove(req: Request, res: Response): Promise<void> {
   const actor = requireUser(req);
   await vehicles.softDeleteVehicle(actor, req.params.id as string);
   ok(res, { success: true });
+}
+
+// ── Detail tabs (§5.2) ──
+export async function availability(req: Request, res: Response): Promise<void> {
+  ok(res, await detail.getAvailability(requireUser(req), req.params.id as string));
+}
+
+export async function rentals(req: Request, res: Response): Promise<void> {
+  ok(res, await detail.listRentals(requireUser(req), req.params.id as string));
+}
+
+export async function maintenance(req: Request, res: Response): Promise<void> {
+  ok(res, await detail.listMaintenance(requireUser(req), req.params.id as string));
+}
+
+export async function damages(req: Request, res: Response): Promise<void> {
+  ok(res, await detail.listDamages(requireUser(req), req.params.id as string));
+}
+
+export async function repairDamage(req: Request, res: Response): Promise<void> {
+  const actor = requireUser(req);
+  ok(res, await detail.markDamageRepaired(actor, req.params.id as string, req.params.damageId as string));
+}
+
+export async function expenses(req: Request, res: Response): Promise<void> {
+  ok(res, await detail.listExpenses(requireUser(req), req.params.id as string));
+}
+
+export async function profitability(req: Request, res: Response): Promise<void> {
+  ok(res, await detail.getProfitability(requireUser(req), req.params.id as string));
 }

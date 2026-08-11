@@ -30,3 +30,10 @@ export async function outstanding(req: Request, res: Response): Promise<void> {
 export async function overdue(req: Request, res: Response): Promise<void> {
   ok(res, await reports.overdueReport(requireUser(req)));
 }
+
+export async function utilization(req: Request, res: Response): Promise<void> {
+  const actor = requireUser(req);
+  const to = req.query.to ? new Date(req.query.to as string) : new Date();
+  const from = req.query.from ? new Date(req.query.from as string) : new Date(to.getTime() - 30 * 86400000);
+  ok(res, await reports.utilizationReport(actor, from, to));
+}

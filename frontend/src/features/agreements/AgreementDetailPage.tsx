@@ -1,9 +1,12 @@
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { LogIn, Receipt } from 'lucide-react';
+import { LogIn, Receipt, FileDown } from 'lucide-react';
 import { useAgreement } from './hooks';
 import { AgreementStatusBadge } from './AgreementStatusBadge';
 import { DamageList } from './DamageList';
+import { InspectionsSection } from './InspectionsSection';
+import { agreementsApi } from './api';
+import { useAuth } from '../auth/hooks';
 import { Button } from '../../components/ui/Button';
 import { Money } from '../../components/ui/Money';
 import { ErrorState } from '../../components/ui/states';
@@ -12,6 +15,8 @@ export default function AgreementDetailPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { id = '' } = useParams();
+  const { data: me } = useAuth();
+  const canCorrect = me ? ['OWNER', 'MANAGER', 'AGENT'].includes(me.role) : false;
   const agreementQuery = useAgreement(id);
 
   if (agreementQuery.isError) return <ErrorState onRetry={() => agreementQuery.refetch()} />;
@@ -34,13 +39,19 @@ export default function AgreementDetailPage() {
             {a.customerName} · <span className="font-mono">{a.vehiclePlate}</span>
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           {open && (
             <Button variant="accent" onClick={() => navigate(`/rentals/${id}/checkin`)}>
               <LogIn size={16} aria-hidden />
               {t('agreements.checkin')}
             </Button>
           )}
+          <a href={agreementsApi.contractPdfUrl(id)} target="_blank" rel="noopener noreferrer">
+            <Button variant="secondary">
+              <FileDown size={16} aria-hidden />
+              {t('agreements.downloadContract')}
+            </Button>
+          </a>
           {a.invoice && (
             <Button variant="secondary" onClick={() => navigate(`/invoices/${a.invoice!.id}`)}>
               <Receipt size={16} aria-hidden />
@@ -62,6 +73,10 @@ export default function AgreementDetailPage() {
       <div className="mb-4 rounded-md border border-border bg-surface p-4 shadow-card">
         <h2 className="mb-2 text-sm font-semibold text-foreground">{t('agreements.damage')}</h2>
         <DamageList preExisting={a.preExistingDamages} neu={a.newDamages} />
+      </div>
+
+      <div className="mb-4">
+        <InspectionsSection agreementId={id} canCorrect={canCorrect} />
       </div>
 
       {a.invoice && (

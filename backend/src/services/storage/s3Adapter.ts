@@ -42,6 +42,13 @@ export class S3StorageAdapter implements StorageAdapter {
     });
   }
 
+  async read(key: string): Promise<Buffer> {
+    const res = await this.client.send(new GetObjectCommand({ Bucket: this.bucket, Key: key }));
+    const bytes = await res.Body?.transformToByteArray();
+    if (!bytes) throw new Error('Empty object');
+    return Buffer.from(bytes);
+  }
+
   async delete(key: string): Promise<void> {
     await this.client.send(new DeleteObjectCommand({ Bucket: this.bucket, Key: key }));
   }

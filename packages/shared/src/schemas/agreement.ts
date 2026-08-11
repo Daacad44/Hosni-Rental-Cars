@@ -64,6 +64,17 @@ const inspectionInputSchema = z.object({
   damages: z.array(damageInputSchema).default([]),
 });
 
+/**
+ * A correction to an existing inspection (§5.7). Append-only: this creates a NEW
+ * inspection record that references the original via supersedesId; the original
+ * is never edited. A reason is required so the record explains itself.
+ */
+export const correctInspectionSchema = z.object({
+  reason: z.string().trim().min(1).max(300),
+  inspection: inspectionInputSchema,
+});
+export type CorrectInspectionRequest = z.infer<typeof correctInspectionSchema>;
+
 export const checkoutSchema = z.object({
   customerId: z.string().min(1),
   vehicleId: z.string().min(1),
@@ -113,6 +124,21 @@ export interface DamageView {
   chargeAmount: string | null;
   isPreExisting: boolean;
   repairedAt: string | null;
+}
+
+export interface InspectionView {
+  id: string;
+  type: 'CHECKOUT' | 'CHECKIN';
+  odometer: number;
+  fuelEighths: number;
+  checklist: InspectionChecklist;
+  notes: string | null;
+  hasSignature: boolean;
+  photoCount: number;
+  supersedesId: string | null;
+  /** True when a later inspection supersedes this one (it is a stale record). */
+  superseded: boolean;
+  createdAt: string;
 }
 
 export interface AgreementListItem {

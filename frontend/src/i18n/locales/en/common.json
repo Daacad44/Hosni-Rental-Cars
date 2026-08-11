@@ -125,7 +125,30 @@
     "docType_INSPECTION": "Inspection",
     "docType_PERMIT": "Permit",
     "noDocuments": "No documents recorded",
-    "noPhotos": "No photos yet"
+    "noPhotos": "No photos yet",
+    "detail": {
+      "kind": "Type",
+      "kind_RESERVATION": "Reservation",
+      "kind_AGREEMENT": "Rental",
+      "kind_MAINTENANCE": "Maintenance",
+      "period": "Period",
+      "customer": "Customer",
+      "panel": "Panel",
+      "severity": "Severity",
+      "markRepaired": "Mark repaired",
+      "repaired": "Repaired",
+      "active": "Active",
+      "noBookings": "Nothing scheduled",
+      "noBookingsBody": "This vehicle has no upcoming reservations, rentals or maintenance.",
+      "noRentals": "No rentals yet",
+      "noRentalsBody": "This vehicle has never been rented out.",
+      "noMaintenance": "No maintenance yet",
+      "noMaintenanceBody": "No maintenance has been scheduled for this vehicle.",
+      "noDamages": "No damage recorded",
+      "noDamagesBody": "No damage has been recorded against this vehicle.",
+      "noExpenses": "No expenses recorded",
+      "noExpensesBody": "No expenses have been booked against this vehicle."
+    }
   },
   "dashboard": {
     "title": "Dashboard",
@@ -221,6 +244,10 @@
     "dueAt": "Due",
     "overdueDays": "Overdue (days)",
     "export": "Export CSV",
+    "utilization": "Fleet utilization",
+    "rentedDays": "Rented days",
+    "availableDays": "Available days",
+    "utilizationPct": "Utilization",
     "utilizationNote": "Utilization = rented vehicle-days ÷ available vehicle-days (maintenance days excluded)."
   },
   "settlement": {
@@ -297,7 +324,20 @@
     "extendTo": "New return date",
     "back": "Back",
     "next": "Next",
-    "draftRestored": "Draft restored"
+    "draftRestored": "Draft restored",
+    "downloadContract": "Contract & receipt (PDF)",
+    "inspections": "Inspections",
+    "noInspections": "No inspections recorded",
+    "inspectionType_CHECKOUT": "Check-out",
+    "inspectionType_CHECKIN": "Check-in",
+    "recorded": "Recorded",
+    "superseded": "Superseded",
+    "correction": "Correction",
+    "correct": "Correct",
+    "correctInspection": "Correct inspection",
+    "correctReason": "Reason for correction",
+    "correctionNote": "This does not edit the original — it records a new, corrected inspection that supersedes it.",
+    "saveCorrection": "Save correction"
   },
   "invoices": {
     "title": "Invoices",
@@ -407,7 +447,25 @@
     "noRateCards": "No rate cards yet",
     "noRateCardsBody": "Add a rate card so vehicles can be priced.",
     "save": "Save rate card",
-    "unlimited": "Unlimited"
+    "unlimited": "Unlimited",
+    "tabOrganization": "Organization",
+    "tabRateCards": "Rate cards",
+    "org": {
+      "title": "Organization settings",
+      "subtitle": "Tax, timezone, currency, grace and service thresholds",
+      "auditNote": "Changes are audit-logged and only affect future pricing — existing quotes and closed agreements keep their own snapshot.",
+      "vatRate": "VAT rate (%)",
+      "graceMinutes": "Grace minutes",
+      "timezone": "Timezone (IANA)",
+      "currency": "Currency (3-letter)",
+      "serviceIntervalKm": "Service interval (km)",
+      "serviceIntervalDays": "Service interval (days)",
+      "serviceThresholdKm": "Service due threshold (km)",
+      "serviceThresholdDays": "Service due threshold (days)",
+      "fuelChargePerEighth": "Fuel charge per 1/8 tank",
+      "save": "Save settings",
+      "saved": "Settings saved"
+    }
   },
   "customers": {
     "title": "Customers",

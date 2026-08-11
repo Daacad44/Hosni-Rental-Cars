@@ -11,7 +11,7 @@ const VehicleDetailPage = lazy(() => import('../features/fleet/VehicleDetailPage
 const CustomerListPage = lazy(() => import('../features/customers/CustomerListPage'));
 const CustomerFormPage = lazy(() => import('../features/customers/CustomerFormPage'));
 const CustomerDetailPage = lazy(() => import('../features/customers/CustomerDetailPage'));
-const RateCardsPage = lazy(() => import('../features/settings/RateCardsPage'));
+const SettingsPage = lazy(() => import('../features/settings/SettingsPage'));
 const ReservationListPage = lazy(() => import('../features/reservations/ReservationListPage'));
 const NewReservationPage = lazy(() => import('../features/reservations/NewReservationPage'));
 const ReservationDetailPage = lazy(() => import('../features/reservations/ReservationDetailPage'));
@@ -97,7 +97,7 @@ export const router = createBrowserRouter([
         element: (
           <RequireRole allow={['OWNER']}>
             <Lazy>
-              <RateCardsPage />
+              <SettingsPage />
             </Lazy>
           </RequireRole>
         ),

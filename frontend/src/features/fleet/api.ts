@@ -7,6 +7,12 @@ import type {
   CreateVehicleDocumentRequest,
   OdometerUpdateRequest,
   OutOfServiceRequest,
+  VehicleAvailability,
+  VehicleRentalRow,
+  VehicleMaintenanceRow,
+  VehicleDamageRow,
+  VehicleExpenseRow,
+  VehicleProfitability,
 } from '@hosni/shared';
 import { apiRequest, apiUpload } from '../../lib/apiClient';
 
@@ -55,6 +61,15 @@ export const fleetApi = {
     apiRequest<VehicleDocumentView>(`/vehicles/${id}/documents`, { method: 'POST', body }),
   deleteDocument: (id: string, documentId: string) =>
     apiRequest<{ success: boolean }>(`/vehicles/${id}/documents/${documentId}`, { method: 'DELETE' }),
+
+  availability: (id: string) => apiRequest<VehicleAvailability>(`/vehicles/${id}/availability`),
+  rentals: (id: string) => apiRequest<VehicleRentalRow[]>(`/vehicles/${id}/rentals`),
+  maintenance: (id: string) => apiRequest<VehicleMaintenanceRow[]>(`/vehicles/${id}/maintenance`),
+  damages: (id: string) => apiRequest<VehicleDamageRow[]>(`/vehicles/${id}/damages`),
+  repairDamage: (id: string, damageId: string) =>
+    apiRequest<VehicleDamageRow>(`/vehicles/${id}/damages/${damageId}/repair`, { method: 'POST' }),
+  expenses: (id: string) => apiRequest<VehicleExpenseRow[]>(`/vehicles/${id}/expenses`),
+  profitability: (id: string) => apiRequest<VehicleProfitability>(`/vehicles/${id}/profitability`),
 
   listPhotos: (id: string) => apiRequest<PhotoView[]>(`/vehicles/${id}/photos`),
   uploadPhoto: (id: string, file: File) => {

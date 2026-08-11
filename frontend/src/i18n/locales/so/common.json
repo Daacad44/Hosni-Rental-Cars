@@ -125,7 +125,30 @@
     "docType_INSPECTION": "Baaritaan",
     "docType_PERMIT": "Ogolaansho",
     "noDocuments": "Dukumenti lama diiwaangelin",
-    "noPhotos": "Weli sawir ma jiro"
+    "noPhotos": "Weli sawir ma jiro",
+    "detail": {
+      "kind": "Nooca",
+      "kind_RESERVATION": "Ballan",
+      "kind_AGREEMENT": "Kiro",
+      "kind_MAINTENANCE": "Dayactir",
+      "period": "Muddo",
+      "customer": "Macmiil",
+      "panel": "Qeyb",
+      "severity": "Darnaan",
+      "markRepaired": "Calaamadi la hagaajiyay",
+      "repaired": "La hagaajiyay",
+      "active": "Firfircoon",
+      "noBookings": "Waxba lama qorsheynin",
+      "noBookingsBody": "Baabuurkan ma laha ballamo, kiro ama dayactir soo socda.",
+      "noRentals": "Weli kiro ma jirto",
+      "noRentalsBody": "Baabuurkan weligiis lama kireyn.",
+      "noMaintenance": "Weli dayactir ma jiro",
+      "noMaintenanceBody": "Baabuurkan dayactir looma qorshayn.",
+      "noDamages": "Waxyeello lama diiwaangelin",
+      "noDamagesBody": "Waxyeello lagama diiwaangelin baabuurkan.",
+      "noExpenses": "Kharash lama diiwaangelin",
+      "noExpensesBody": "Kharash lagama qorin baabuurkan."
+    }
   },
   "dashboard": {
     "title": "Dashboard",
@@ -221,6 +244,10 @@
     "dueAt": "Xilliga",
     "overdueDays": "Daahay (maalmo)",
     "export": "Soo saar CSV",
+    "utilization": "Isticmaalka baabuurta",
+    "rentedDays": "Maalmo la kireeyay",
+    "availableDays": "Maalmo la heli karo",
+    "utilizationPct": "Isticmaalka",
     "utilizationNote": "Isticmaalka = maalmo-baabuur la kireeyay ÷ maalmo-baabuur la heli karo (maalmaha dayactirka laga saaray)."
   },
   "settlement": {
@@ -297,7 +324,20 @@
     "extendTo": "Taariikhda soo celinta cusub",
     "back": "Dib",
     "next": "Xiga",
-    "draftRestored": "Qabyo la soo celiyay"
+    "draftRestored": "Qabyo la soo celiyay",
+    "downloadContract": "Heshiis & rasiid (PDF)",
+    "inspections": "Kormeerayaal",
+    "noInspections": "Kormeer lama diiwaangelin",
+    "inspectionType_CHECKOUT": "Bixinta",
+    "inspectionType_CHECKIN": "Soo celinta",
+    "recorded": "La diiwaangeliyay",
+    "superseded": "La beddelay",
+    "correction": "Saxid",
+    "correct": "Sax",
+    "correctInspection": "Sax kormeerka",
+    "correctReason": "Sababta saxitaanka",
+    "correctionNote": "Tani ma beddesho kii asalka ahaa — waxay diiwaangelinaysaa kormeer cusub oo sax ah oo beddela kii hore.",
+    "saveCorrection": "Kaydi saxitaanka"
   },
   "invoices": {
     "title": "Qaansheegadaha",
@@ -407,7 +447,25 @@
     "noRateCards": "Weli kaar qiime ma jiro",
     "noRateCardsBody": "Ku dar kaar qiime si baabuurta loo qiimeeyo.",
     "save": "Kaydi kaarka",
-    "unlimited": "Aan xad lahayn"
+    "unlimited": "Aan xad lahayn",
+    "tabOrganization": "Ururka",
+    "tabRateCards": "Kaararka qiimaha",
+    "org": {
+      "title": "Dejinta ururka",
+      "subtitle": "Cashuur, waqti-goboleed, lacag, nasasho iyo xadka adeegga",
+      "auditNote": "Isbeddellada waa la diiwaangeliyaa, waxayna saameeyaan qiimaha mustaqbalka kaliya — qiimayaasha jira iyo heshiisyada la xiray waxay hayaan kuwoodii.",
+      "vatRate": "Qiimaha VAT (%)",
+      "graceMinutes": "Daqiiqadaha nasashada",
+      "timezone": "Waqti-goboleed (IANA)",
+      "currency": "Lacagta (3-xaraf)",
+      "serviceIntervalKm": "Muddada adeegga (km)",
+      "serviceIntervalDays": "Muddada adeegga (maalmo)",
+      "serviceThresholdKm": "Xadka adeegga (km)",
+      "serviceThresholdDays": "Xadka adeegga (maalmo)",
+      "fuelChargePerEighth": "Lacagta shidaalka 1/8 taangi",
+      "save": "Kaydi dejinta",
+      "saved": "Dejinta waa la kaydiyay"
+    }
   },
   "customers": {
     "title": "Macaamiisha",

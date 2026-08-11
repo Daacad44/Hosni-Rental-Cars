@@ -2,6 +2,15 @@ import type { ApiErrorBody, ApiSuccess, ErrorCode, PaginationMeta } from '@hosni
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:4000/api/v1';
 
+/**
+ * Absolute URL for a file endpoint (e.g. a PDF) to open in a new tab. Auth is
+ * carried by the session cookie on the top-level GET navigation, so no header
+ * plumbing is needed — the one case a browser navigation, not fetch, is right.
+ */
+export function apiFileUrl(path: string): string {
+  return `${BASE_URL}${path}`;
+}
+
 /** Error thrown by the client, carrying the server's typed code. */
 export class ApiError extends Error {
   readonly code: ErrorCode;

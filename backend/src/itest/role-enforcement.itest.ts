@@ -42,6 +42,13 @@ const ROUTES: Endpoint[] = [
   { method: 'get', path: `/vehicles/${ID}`, allow: ALL },
   { method: 'get', path: `/vehicles/${ID}/documents`, allow: ALL },
   { method: 'get', path: `/vehicles/${ID}/photos`, allow: ALL },
+  { method: 'get', path: `/vehicles/${ID}/availability`, allow: ALL },
+  { method: 'get', path: `/vehicles/${ID}/rentals`, allow: ALL },
+  { method: 'get', path: `/vehicles/${ID}/maintenance`, allow: ALL },
+  { method: 'get', path: `/vehicles/${ID}/damages`, allow: ALL },
+  { method: 'post', path: `/vehicles/${ID}/damages/${ID}/repair`, allow: ['OWNER', 'MANAGER', 'MECHANIC'] },
+  { method: 'get', path: `/vehicles/${ID}/expenses`, allow: ['OWNER', 'MANAGER'] },
+  { method: 'get', path: `/vehicles/${ID}/profitability`, allow: ['OWNER', 'MANAGER'] },
   { method: 'post', path: '/vehicles', allow: ['OWNER', 'MANAGER', 'MECHANIC'] },
   { method: 'patch', path: `/vehicles/${ID}`, allow: ['OWNER', 'MANAGER', 'MECHANIC'] },
   { method: 'post', path: `/vehicles/${ID}/odometer`, allow: ['OWNER', 'MANAGER', 'MECHANIC'] },
@@ -80,6 +87,9 @@ const ROUTES: Endpoint[] = [
   // agreements — OWNER/MANAGER/AGENT
   { method: 'get', path: '/agreements', allow: ['OWNER', 'MANAGER', 'AGENT'] },
   { method: 'get', path: `/agreements/${ID}`, allow: ['OWNER', 'MANAGER', 'AGENT'] },
+  { method: 'get', path: `/agreements/${ID}/contract.pdf`, allow: ['OWNER', 'MANAGER', 'AGENT'] },
+  { method: 'get', path: `/agreements/${ID}/inspections`, allow: ['OWNER', 'MANAGER', 'AGENT'] },
+  { method: 'post', path: `/agreements/${ID}/inspections/${ID}/correct`, allow: ['OWNER', 'MANAGER', 'AGENT'] },
   { method: 'post', path: '/agreements/checkout', allow: ['OWNER', 'MANAGER', 'AGENT'] },
   { method: 'post', path: `/agreements/${ID}/settlement-preview`, allow: ['OWNER', 'MANAGER', 'AGENT'] },
   { method: 'post', path: `/agreements/${ID}/checkin`, allow: ['OWNER', 'MANAGER', 'AGENT'] },
@@ -114,6 +124,11 @@ const ROUTES: Endpoint[] = [
   { method: 'get', path: '/reports/profitability', allow: ['OWNER', 'MANAGER'] },
   { method: 'get', path: '/reports/outstanding', allow: ['OWNER', 'MANAGER'] },
   { method: 'get', path: '/reports/overdue', allow: ['OWNER', 'MANAGER'] },
+  { method: 'get', path: '/reports/utilization', allow: ['OWNER', 'MANAGER'] },
+
+  // organization settings — OWNER only (§15)
+  { method: 'get', path: '/organization', allow: ['OWNER'] },
+  { method: 'patch', path: '/organization', allow: ['OWNER'] },
 
   // dashboard & alerts — any signed-in user
   { method: 'get', path: '/dashboard', allow: ALL },

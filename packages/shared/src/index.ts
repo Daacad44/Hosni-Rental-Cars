@@ -11,3 +11,4 @@ export * from './schemas/invoice.js';
 export * from './schemas/agreement.js';
 export * from './schemas/upkeep.js';
 export * from './schemas/reports.js';
+export * from './schemas/organization.js';

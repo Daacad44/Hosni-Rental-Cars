@@ -1,5 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { CheckoutRequest, CheckinRequest, ExtendAgreementRequest } from '@hosni/shared';
+import type {
+  CheckoutRequest,
+  CheckinRequest,
+  ExtendAgreementRequest,
+  CorrectInspectionRequest,
+} from '@hosni/shared';
 import { agreementsApi, type AgreementQuery } from './api';
 
 export function useAgreements(query: AgreementQuery) {
@@ -45,5 +50,25 @@ export function useExtendAgreement(id: string) {
   return useMutation({
     mutationFn: (body: ExtendAgreementRequest) => agreementsApi.extend(id, body),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['agreement', id] }),
+  });
+}
+
+export function useInspections(id: string) {
+  return useQuery({
+    queryKey: ['agreement', id, 'inspections'],
+    queryFn: () => agreementsApi.inspections(id),
+    enabled: Boolean(id),
+  });
+}
+
+export function useCorrectInspection(id: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ inspectionId, body }: { inspectionId: string; body: CorrectInspectionRequest }) =>
+      agreementsApi.correctInspection(id, inspectionId, body),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['agreement', id, 'inspections'] });
+      void qc.invalidateQueries({ queryKey: ['agreement', id] });
+    },
   });
 }
