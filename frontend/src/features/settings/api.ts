@@ -1,5 +1,10 @@
-import type { RateCardRequest, RateCardView } from '@hosni/shared';
+import type { RateCardRequest, RateCardView, OrgSettingsView, UpdateOrgSettingsRequest } from '@hosni/shared';
 import { apiRequest } from '../../lib/apiClient';
+
+export const orgApi = {
+  get: () => apiRequest<OrgSettingsView>('/organization'),
+  update: (body: UpdateOrgSettingsRequest) => apiRequest<OrgSettingsView>('/organization', { method: 'PATCH', body }),
+};
 
 export const rateCardsApi = {
   list: () => apiRequest<RateCardView[]>('/rate-cards'),
