@@ -4,6 +4,8 @@ import { Prisma } from '@prisma/client';
 import type { ApiErrorBody, ErrorCode } from '@hosni/shared';
 import { AppError } from '../lib/AppError.js';
 import { logger } from '../lib/logger.js';
+import { captureException } from '../lib/monitoring.js';
+import { currentReqId } from '../lib/requestContext.js';
 
 export const notFoundHandler: RequestHandler = (_req, res) => {
   send(res, 404, 'NOT_FOUND', 'Resource not found');
@@ -34,7 +36,10 @@ export const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
     }
   }
 
+  // Truly unexpected: log it and report it to the monitoring sink. The request
+  // id ties the client-visible 500 to this log line and the Sentry event.
   logger.error({ err }, 'Unhandled error');
+  captureException(err, { reqId: currentReqId() });
   return send(res, 500, 'INTERNAL_ERROR', 'Something went wrong');
 };
 

@@ -8,6 +8,7 @@ import { Button } from '../../components/ui/Button';
 import { SelectField } from '../../components/ui/SelectField';
 import { Money } from '../../components/ui/Money';
 import { TableSkeleton, ErrorState, EmptyState } from '../../components/ui/states';
+import { useActiveBranch } from '../../app/ActiveBranchContext';
 
 const PAGE_SIZE = 20;
 
@@ -17,8 +18,12 @@ export default function InvoiceListPage() {
   const [params, setParams] = useSearchParams();
   const status = params.get('status') ?? '';
   const page = Number(params.get('page') ?? '1');
+  const { branchId: activeBranch } = useActiveBranch();
 
-  const query = useMemo(() => ({ status: status || undefined, page, pageSize: PAGE_SIZE }), [status, page]);
+  const query = useMemo(
+    () => ({ status: status || undefined, branchId: activeBranch || undefined, page, pageSize: PAGE_SIZE }),
+    [status, activeBranch, page],
+  );
   const invoicesQuery = useInvoices(query);
   const rows = invoicesQuery.data?.data ?? [];
   const total = invoicesQuery.data?.meta?.total ?? 0;

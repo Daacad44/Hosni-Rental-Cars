@@ -9,6 +9,7 @@ import { VehicleStatusBadge } from './VehicleStatusBadge';
 import { Button } from '../../components/ui/Button';
 import { SelectField } from '../../components/ui/SelectField';
 import { TableSkeleton, ErrorState, EmptyState } from '../../components/ui/states';
+import { useActiveBranch } from '../../app/ActiveBranchContext';
 
 const PAGE_SIZE = 20;
 
@@ -19,9 +20,12 @@ export default function FleetListPage() {
   const branches = useBranches();
 
   // Filters live in the URL so a view can be linked and shared.
+  const { branchId: activeBranch } = useActiveBranch();
   const q = params.get('q') ?? '';
   const status = params.get('status') ?? '';
+  // A page-level branch filter wins; otherwise the topbar branch switcher applies.
   const branchId = params.get('branchId') ?? '';
+  const effectiveBranch = branchId || activeBranch;
   const docsExpiring = params.get('docsExpiring') === '1';
   const page = Number(params.get('page') ?? '1');
 
@@ -29,12 +33,12 @@ export default function FleetListPage() {
     () => ({
       q: q || undefined,
       status: status || undefined,
-      branchId: branchId || undefined,
+      branchId: effectiveBranch || undefined,
       docsExpiringDays: docsExpiring ? 30 : undefined,
       page,
       pageSize: PAGE_SIZE,
     }),
-    [q, status, branchId, docsExpiring, page],
+    [q, status, effectiveBranch, docsExpiring, page],
   );
 
   const vehiclesQuery = useVehicles(query);

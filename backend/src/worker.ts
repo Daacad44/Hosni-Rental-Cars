@@ -8,6 +8,7 @@ import { Queue, Worker, type JobsOptions } from 'bullmq';
 import { logger } from './lib/logger.js';
 import { redis } from './lib/redis.js';
 import { prisma } from './lib/prisma.js';
+import { initMonitoring, captureException } from './lib/monitoring.js';
 import {
   documentExpiryJob,
   overdueReturnsJob,
@@ -41,6 +42,7 @@ const schedule: Array<{ name: JobName; pattern: string }> = [
 ];
 
 async function main() {
+  initMonitoring();
   await redis.ping();
   const queue = new Queue(QUEUE, { connection });
 
@@ -58,7 +60,10 @@ async function main() {
     { connection },
   );
 
-  worker.on('failed', (job, err) => logger.error({ job: job?.name, err }, 'Job failed'));
+  worker.on('failed', (job, err) => {
+    logger.error({ job: job?.name, err }, 'Job failed');
+    captureException(err, { job: job?.name });
+  });
   worker.on('completed', (job) => logger.debug({ job: job.name }, 'Job completed'));
 
   logger.info('Worker started with scheduled jobs');
@@ -66,6 +71,7 @@ async function main() {
 
 main().catch((err) => {
   logger.error({ err }, 'Worker failed to start');
+  captureException(err);
   process.exit(1);
 });
 

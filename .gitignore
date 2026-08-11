@@ -6,6 +6,9 @@ coverage/
 .env
 .env.local
 .env.*.local
+.env.prod
+deploy/.env.prod
+deploy/backups/
 .DS_Store
 *.tsbuildinfo
 frontend/dist/

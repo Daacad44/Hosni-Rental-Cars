@@ -1,0 +1,118 @@
+# Production stack for a single VPS.
+#
+#   cd deploy
+#   cp .env.prod.example .env.prod   # then fill it in
+#   docker compose -f docker-compose.prod.yml --env-file .env.prod build backend
+#   docker compose -f docker-compose.prod.yml --env-file .env.prod up -d
+#
+# Datastores (postgres, redis) sit on an INTERNAL network with NO published
+# ports — a Redis reachable from the internet draws bot traffic within hours.
+# Only the reverse proxy publishes 80/443.
+name: hosni
+
+networks:
+  # proxy <-> web tier
+  edge:
+  # web tier <-> datastores; not reachable from outside the host
+  internal:
+
+volumes:
+  pgdata:
+  redisdata:
+  uploads:
+  caddy_data:
+  caddy_config:
+
+services:
+  # ── Reverse proxy: TLS termination + host routing ──────────────────────────
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - '80:80'
+      - '443:443'
+    environment:
+      DOMAIN: ${DOMAIN:?set DOMAIN in .env.prod}
+      ACME_EMAIL: ${ACME_EMAIL:?set ACME_EMAIL in .env.prod}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks: [edge]
+    depends_on: [frontend, backend]
+
+  # ── Frontend: static SPA behind the proxy ──────────────────────────────────
+  frontend:
+    build:
+      context: ..
+      dockerfile: frontend/Dockerfile
+      args:
+        VITE_API_BASE_URL: https://api.${DOMAIN}/api/v1
+    image: hosni/frontend:latest
+    restart: unless-stopped
+    networks: [edge]
+    expose: ['8080']
+
+  # ── Backend API ────────────────────────────────────────────────────────────
+  backend:
+    build:
+      context: ..
+      dockerfile: backend/Dockerfile
+    image: hosni/backend:latest
+    restart: unless-stopped
+    env_file: .env.prod
+    environment:
+      NODE_ENV: production
+    networks: [edge, internal]
+    expose: ['4000']
+    volumes:
+      - uploads:/app/backend/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  # ── Worker: the SAME image as backend, different command ───────────────────
+  worker:
+    image: hosni/backend:latest
+    restart: unless-stopped
+    command: ['node', 'dist/worker.js']
+    env_file: .env.prod
+    environment:
+      NODE_ENV: production
+    networks: [internal]
+    depends_on:
+      backend:
+        condition: service_started
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  # ── Datastores (internal only, no published ports) ─────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    env_file: .env.prod
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks: [internal]
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ['redis-server', '--appendonly', 'yes']
+    volumes:
+      - redisdata:/data
+    networks: [internal]
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 10

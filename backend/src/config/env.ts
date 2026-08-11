@@ -36,6 +36,11 @@ const envSchema = z.object({
   // Number of proxies in front of the app, for express `trust proxy`.
   TRUST_PROXY_HOPS: z.coerce.number().int().nonnegative().default(1),
 
+  // Structured-log level and the error-monitoring sink (Sentry). SENTRY_DSN
+  // empty = monitoring disabled (dev/CI); set it in production.
+  LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).optional(),
+  SENTRY_DSN: z.string().optional(),
+
   // Object storage. 'local' writes to disk for development; 's3' targets an
   // S3-compatible private bucket in production, served via signed URLs only.
   STORAGE_DRIVER: z.enum(['local', 's3']).default('local'),

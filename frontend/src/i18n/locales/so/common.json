@@ -1,5 +1,16 @@
 {
   "app": { "name": "Hosni Rental Cars" },
+  "search": {
+    "placeholder": "Raadi taarikada, macmiil, #heshiis",
+    "vehicles": "Baabuurta",
+    "customers": "Macaamiisha",
+    "agreements": "Kirooyinka",
+    "noResults": "Wax lama helin"
+  },
+  "branch": {
+    "all": "Dhammaan laamaha",
+    "switch": "Beddel laanta"
+  },
   "nav": {
     "dashboard": "Dashboard",
     "fleet": "Baabuurta",

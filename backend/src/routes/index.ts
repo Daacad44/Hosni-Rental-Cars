@@ -16,6 +16,7 @@ import { authenticate } from '../middleware/authenticate.js';
 import { singleUpload } from '../middleware/upload.js';
 import { asyncHandler } from '../lib/respond.js';
 import * as files from '../controllers/files.controller.js';
+import * as searchController from '../controllers/search.controller.js';
 
 export const apiRouter = Router();
 
@@ -37,5 +38,6 @@ apiRouter.use('/dashboard', dashboardRoutes);
 apiRouter.use('/alerts', alertRoutes);
 apiRouter.use('/reports', reportRoutes);
 apiRouter.use('/organization', organizationRoutes);
+apiRouter.get('/search', authenticate, asyncHandler(searchController.global));
 apiRouter.get('/files', authenticate, asyncHandler(files.download));
 apiRouter.post('/uploads', authenticate, singleUpload, asyncHandler(files.upload));

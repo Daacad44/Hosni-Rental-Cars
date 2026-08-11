@@ -1,0 +1,14 @@
+# Keep the Docker build context small and reproducible: never ship local
+# node_modules or build output into the image — they're installed/built inside.
+**/node_modules
+**/dist
+**/.vite
+**/*.tsbuildinfo
+**/coverage
+.git
+.github
+**/*.log
+**/.env
+**/.env.*
+deploy/backups
+backend/uploads

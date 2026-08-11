@@ -1,5 +1,16 @@
 {
   "app": { "name": "Hosni Rental Cars" },
+  "search": {
+    "placeholder": "Search plate, customer, #agreement",
+    "vehicles": "Vehicles",
+    "customers": "Customers",
+    "agreements": "Rentals",
+    "noResults": "No matches"
+  },
+  "branch": {
+    "all": "All branches",
+    "switch": "Switch branch"
+  },
   "nav": {
     "dashboard": "Dashboard",
     "fleet": "Fleet",

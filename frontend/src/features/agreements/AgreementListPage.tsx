@@ -8,6 +8,7 @@ import { AgreementStatusBadge } from './AgreementStatusBadge';
 import { Button } from '../../components/ui/Button';
 import { SelectField } from '../../components/ui/SelectField';
 import { TableSkeleton, ErrorState, EmptyState } from '../../components/ui/states';
+import { useActiveBranch } from '../../app/ActiveBranchContext';
 
 const PAGE_SIZE = 20;
 
@@ -17,8 +18,12 @@ export default function AgreementListPage() {
   const [params, setParams] = useSearchParams();
   const status = params.get('status') ?? '';
   const page = Number(params.get('page') ?? '1');
+  const { branchId: activeBranch } = useActiveBranch();
 
-  const query = useMemo(() => ({ status: status || undefined, page, pageSize: PAGE_SIZE }), [status, page]);
+  const query = useMemo(
+    () => ({ status: status || undefined, branchId: activeBranch || undefined, page, pageSize: PAGE_SIZE }),
+    [status, activeBranch, page],
+  );
   const agreementsQuery = useAgreements(query);
   const rows = agreementsQuery.data?.data ?? [];
   const total = agreementsQuery.data?.meta?.total ?? 0;

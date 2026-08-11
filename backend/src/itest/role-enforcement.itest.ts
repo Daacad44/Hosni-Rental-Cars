@@ -130,9 +130,10 @@ const ROUTES: Endpoint[] = [
   { method: 'get', path: '/organization', allow: ['OWNER'] },
   { method: 'patch', path: '/organization', allow: ['OWNER'] },
 
-  // dashboard & alerts — any signed-in user
+  // dashboard, alerts & global search — any signed-in user
   { method: 'get', path: '/dashboard', allow: ALL },
   { method: 'get', path: '/alerts', allow: ALL },
+  { method: 'get', path: '/search', allow: ALL },
 ];
 
 function send(method: Method, path: string, cookie: string, body: unknown) {

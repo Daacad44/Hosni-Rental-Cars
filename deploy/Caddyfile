@@ -1,0 +1,27 @@
+# Reverse proxy for a single VPS. Caddy provisions and renews TLS certificates
+# automatically via Let's Encrypt (needs public DNS A/AAAA records for both
+# subdomains pointing at this host, and ports 80/443 reachable).
+#
+#   app.<domain>  -> frontend (static SPA)
+#   api.<domain>  -> backend  (API on :4000)
+#
+# DOMAIN and ACME_EMAIL come from the environment (set in .env.prod).
+
+{
+	email {$ACME_EMAIL}
+}
+
+app.{$DOMAIN} {
+	encode gzip
+	# HSTS on the TLS edge.
+	header Strict-Transport-Security "max-age=31536000; includeSubDomains"
+	reverse_proxy frontend:8080
+}
+
+api.{$DOMAIN} {
+	encode gzip
+	header Strict-Transport-Security "max-age=31536000; includeSubDomains"
+	# One proxy hop in front of the API — the backend sets trust proxy = 1 so
+	# rate limiting keys on the real client IP, not on Caddy.
+	reverse_proxy backend:4000
+}

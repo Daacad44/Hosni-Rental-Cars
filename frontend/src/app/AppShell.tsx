@@ -5,6 +5,9 @@ import { LogOut, Menu, X } from 'lucide-react';
 import type { AuthUser } from '@hosni/shared';
 import { Sidebar } from './Sidebar';
 import { LanguageToggle } from './LanguageToggle';
+import { GlobalSearch } from './GlobalSearch';
+import { BranchSwitcher } from './BranchSwitcher';
+import { ActiveBranchProvider } from './ActiveBranchContext';
 import { useLogout } from '../features/auth/hooks';
 import { Button } from '../components/ui/Button';
 import { cn } from '../lib/cn';
@@ -15,6 +18,7 @@ export function AppShell({ user }: { user: AuthUser }) {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
+    <ActiveBranchProvider>
     <div className="flex h-screen overflow-hidden bg-background">
       {/* Desktop sidebar */}
       <aside className="hidden md:block">
@@ -45,12 +49,9 @@ export function AppShell({ user }: { user: AuthUser }) {
             >
               {mobileOpen ? <X size={20} /> : <Menu size={20} />}
             </button>
-            <span className="text-sm font-medium text-muted">{user.organization.name}</span>
-            {user.branch && (
-              <span className="rounded-sm bg-surface-alt px-2 py-0.5 text-xs text-foreground">
-                {user.branch.name}
-              </span>
-            )}
+            <span className="hidden text-sm font-medium text-muted lg:inline">{user.organization.name}</span>
+            <BranchSwitcher user={user} />
+            <GlobalSearch />
           </div>
 
           <div className="flex items-center gap-3">
@@ -77,5 +78,6 @@ export function AppShell({ user }: { user: AuthUser }) {
         </main>
       </div>
     </div>
+    </ActiveBranchProvider>
   );
 }
