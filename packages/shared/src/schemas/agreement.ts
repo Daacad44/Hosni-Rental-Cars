@@ -96,6 +96,15 @@ export type CheckinRequest = z.infer<typeof checkinSchema>;
 export const extendAgreementSchema = z.object({ endAt: z.string().datetime() });
 export type ExtendAgreementRequest = z.infer<typeof extendAgreementSchema>;
 
+/** Append-only correction of a recorded inspection (§5.7). */
+export const correctInspectionSchema = z.object({
+  odometer: z.number().int().min(0),
+  fuelEighths: FUEL_EIGHTHS,
+  checklist: inspectionChecklistSchema,
+  notes: z.string().trim().max(1000).optional(),
+});
+export type CorrectInspectionRequest = z.infer<typeof correctInspectionSchema>;
+
 export const agreementFiltersSchema = z.object({
   status: agreementStatusSchema.optional(),
   branchId: z.string().optional(),

@@ -85,18 +85,49 @@ export async function listCustomers(
   };
 }
 
+const REVENUE_EXCLUDED = ['DEPOSIT', 'DEPOSIT_REFUND'];
+
 /**
- * Aggregate lifetime figures for a customer. Rentals, spend, outstanding
- * balance, damages and late returns are read from the agreements, invoices and
- * damage tables as those modules land; until then they report zero.
+ * Lifetime figures for a customer, aggregated in SQL. Total spend is revenue
+ * lines paid (deposits excluded); outstanding is unpaid invoice balance; a late
+ * return is one closed after its due time or still overdue.
  */
-async function customerStats(_organizationId: string, _customerId: string) {
+async function customerStats(organizationId: string, customerId: string) {
+  const [rentalCount, agreements, spendAgg, outstandingAgg] = await Promise.all([
+    prisma.agreement.count({ where: { organizationId, customerId } }),
+    prisma.agreement.findMany({
+      where: { organizationId, customerId },
+      select: { id: true, status: true, endAt: true, closedAt: true },
+    }),
+    prisma.invoiceLine.aggregate({
+      _sum: { amount: true },
+      where: {
+        organizationId,
+        kind: { notIn: REVENUE_EXCLUDED },
+        invoice: { is: { customerId, isVoid: false } },
+      },
+    }),
+    prisma.invoice.aggregate({
+      _sum: { balance: true },
+      where: { organizationId, customerId, isVoid: false, balance: { gt: 0 } },
+    }),
+  ]);
+
+  const agreementIds = agreements.map((a) => a.id);
+  const damageCount = agreementIds.length
+    ? await prisma.damage.count({ where: { organizationId, agreementId: { in: agreementIds } } })
+    : 0;
+
+  const lateReturnCount = agreements.filter(
+    (a) => a.status === 'OVERDUE' || (a.closedAt !== null && a.closedAt.getTime() > a.endAt.getTime()),
+  ).length;
+
   return {
-    rentalCount: 0,
-    totalSpend: '0.00',
-    outstandingBalance: '0.00',
-    damageCount: 0,
-    lateReturnCount: 0,
+    rentalCount,
+    totalSpend: (spendAgg._sum.amount ?? new Prisma.Decimal(0)).toFixed(2),
+    outstandingBalance: (outstandingAgg._sum.balance ?? new Prisma.Decimal(0)).toFixed(2),
+    damageCount,
+    lateReturnCount,
   };
 }
 

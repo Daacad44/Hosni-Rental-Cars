@@ -9,6 +9,7 @@ import {
 } from '@hosni/shared';
 import * as vehicles from '../controllers/vehicles.controller.js';
 import * as media from '../controllers/vehicleMedia.controller.js';
+import * as damages from '../controllers/damages.controller.js';
 import { authenticate, requireRole } from '../middleware/authenticate.js';
 import { validateBody, validateQuery } from '../middleware/validate.js';
 import { singleUpload } from '../middleware/upload.js';
@@ -51,6 +52,10 @@ vehicleRoutes.post(
   asyncHandler(media.createDocument),
 );
 vehicleRoutes.delete('/:id/documents/:documentId', canEdit, asyncHandler(media.deleteDocument));
+
+// Damages: any role may read the vehicle's damage history; repair is fleet-domain.
+vehicleRoutes.get('/:id/damages', asyncHandler(damages.listVehicleDamages));
+vehicleRoutes.post('/:id/damages/:damageId/repair', canEdit, asyncHandler(damages.repairDamage));
 
 // Photos
 vehicleRoutes.get('/:id/photos', asyncHandler(media.listPhotos));

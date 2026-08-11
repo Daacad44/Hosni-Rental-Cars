@@ -4,8 +4,10 @@ import {
   checkinSchema,
   extendAgreementSchema,
   agreementFiltersSchema,
+  correctInspectionSchema,
 } from '@hosni/shared';
 import * as agreements from '../controllers/agreements.controller.js';
+import * as damages from '../controllers/damages.controller.js';
 import { authenticate, requireRole } from '../middleware/authenticate.js';
 import { validateBody, validateQuery } from '../middleware/validate.js';
 import { asyncHandler } from '../lib/respond.js';
@@ -25,3 +27,11 @@ agreementRoutes.post(
 );
 agreementRoutes.post('/:id/checkin', validateBody(checkinSchema), asyncHandler(agreements.checkin));
 agreementRoutes.post('/:id/extend', validateBody(extendAgreementSchema), asyncHandler(agreements.extend));
+
+// Inspections: read the record and append a correction (never edit evidence).
+agreementRoutes.get('/:id/inspections', asyncHandler(damages.listInspections));
+agreementRoutes.post(
+  '/:id/inspections/:inspectionId/correct',
+  validateBody(correctInspectionSchema),
+  asyncHandler(damages.correctInspection),
+);
