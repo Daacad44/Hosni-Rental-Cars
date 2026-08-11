@@ -18,6 +18,8 @@ export const agreementRoutes = Router();
 agreementRoutes.use(authenticate, requireRole('OWNER', 'MANAGER', 'AGENT'));
 
 agreementRoutes.get('/', validateQuery(agreementFiltersSchema), asyncHandler(agreements.list));
+agreementRoutes.get('/:id/contract.pdf', asyncHandler(agreements.contractPdf));
+agreementRoutes.get('/:id/receipt.pdf', asyncHandler(agreements.receiptPdf));
 agreementRoutes.get('/:id', asyncHandler(agreements.get));
 agreementRoutes.post('/checkout', validateBody(checkoutSchema), asyncHandler(agreements.checkout));
 agreementRoutes.post(

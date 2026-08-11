@@ -294,6 +294,8 @@
     "confirmCheckin": "Confirm check-in",
     "confirmCheckinBody": "This moves money. Confirm the settlement and close the rental?",
     "extend": "Extend",
+    "contractPdf": "Contract PDF",
+    "receiptPdf": "Receipt PDF",
     "extendTo": "New return date",
     "back": "Back",
     "next": "Next",

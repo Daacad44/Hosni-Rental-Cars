@@ -1,6 +1,8 @@
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { LogIn, Receipt } from 'lucide-react';
+import { LogIn, Receipt, FileText } from 'lucide-react';
+
+const API_BASE = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:4000/api/v1';
 import { useAgreement } from './hooks';
 import { AgreementStatusBadge } from './AgreementStatusBadge';
 import { DamageList } from './DamageList';
@@ -46,6 +48,20 @@ export default function AgreementDetailPage() {
               <Receipt size={16} aria-hidden />
               {t('invoices.number')}
             </Button>
+          )}
+          <a href={`${API_BASE}/agreements/${id}/contract.pdf`} target="_blank" rel="noreferrer">
+            <Button variant="ghost">
+              <FileText size={16} aria-hidden />
+              {t('agreements.contractPdf')}
+            </Button>
+          </a>
+          {a.status === 'CLOSED' && a.invoice && (
+            <a href={`${API_BASE}/agreements/${id}/receipt.pdf`} target="_blank" rel="noreferrer">
+              <Button variant="ghost">
+                <FileText size={16} aria-hidden />
+                {t('agreements.receiptPdf')}
+              </Button>
+            </a>
           )}
         </div>
       </div>
