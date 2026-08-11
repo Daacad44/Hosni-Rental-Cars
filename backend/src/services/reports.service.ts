@@ -5,6 +5,7 @@ import type {
   ProfitabilityRow,
   OutstandingRow,
   OverdueRow,
+  UtilizationRow,
 } from '@hosni/shared';
 import { prisma } from '../lib/prisma.js';
 import type { AuthContext } from '../middleware/authenticate.js';
@@ -143,6 +144,47 @@ export async function outstandingReport(actor: AuthContext): Promise<Outstanding
       balance: money(i.balance),
       ageDays,
       bucket,
+    };
+  });
+}
+
+/**
+ * Fleet utilization over a window: rented vehicle-days ÷ available vehicle-days,
+ * with maintenance days excluded from the denominator. The overlap durations are
+ * summed in SQL (LEAST/GREATEST clamp each record to the window); the final
+ * ratio is a scalar division per row.
+ */
+export async function utilizationReport(actor: AuthContext, from: Date, to: Date): Promise<UtilizationRow[]> {
+  const rows = await prisma.$queryRaw<Array<{ vehicleId: string; plateNumber: string; rentedSecs: number; maintSecs: number }>>(Prisma.sql`
+    SELECT v."id" AS "vehicleId", v."plateNumber",
+      COALESCE((
+        SELECT SUM(EXTRACT(EPOCH FROM (LEAST(a."endAt", ${to}) - GREATEST(a."startAt", ${from}))))
+        FROM "Agreement" a
+        WHERE a."vehicleId" = v."id" AND a."startAt" < ${to} AND a."endAt" > ${from}
+      ), 0)::float8 AS "rentedSecs",
+      COALESCE((
+        SELECT SUM(EXTRACT(EPOCH FROM (LEAST(m."scheduledEnd", ${to}) - GREATEST(m."scheduledStart", ${from}))))
+        FROM "Maintenance" m
+        WHERE m."vehicleId" = v."id" AND m."status" IN ('SCHEDULED','IN_PROGRESS','COMPLETED')
+          AND m."scheduledStart" < ${to} AND m."scheduledEnd" > ${from}
+      ), 0)::float8 AS "maintSecs"
+    FROM "Vehicle" v
+    WHERE v."organizationId" = ${actor.organizationId} AND v."deletedAt" IS NULL
+    ORDER BY v."plateNumber"
+  `);
+
+  const windowSecs = Math.max(1, (to.getTime() - from.getTime()) / 1000);
+  return rows.map((r) => {
+    const rentedDays = r.rentedSecs / 86400;
+    const availableSecs = Math.max(0, windowSecs - r.maintSecs);
+    const availableDays = availableSecs / 86400;
+    const pct = availableDays > 0 ? Math.min(100, (rentedDays / availableDays) * 100) : 0;
+    return {
+      vehicleId: r.vehicleId,
+      plateNumber: r.plateNumber,
+      rentedDays: Math.round(rentedDays * 10) / 10,
+      availableDays: Math.round(availableDays * 10) / 10,
+      utilizationPct: Math.round(pct * 10) / 10,
     };
   });
 }

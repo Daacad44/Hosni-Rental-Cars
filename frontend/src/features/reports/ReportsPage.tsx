@@ -10,12 +10,12 @@ import { StatusBadge } from '../../components/ui/StatusBadge';
 import { ErrorState } from '../../components/ui/states';
 import { downloadCsv } from '../../lib/csv';
 
-type Tab = 'revenue' | 'profitability' | 'outstanding' | 'overdue';
+type Tab = 'revenue' | 'utilization' | 'profitability' | 'outstanding' | 'overdue';
 
 export default function ReportsPage() {
   const { t } = useTranslation();
   const [tab, setTab] = useState<Tab>('revenue');
-  const tabs: Tab[] = ['revenue', 'profitability', 'outstanding', 'overdue'];
+  const tabs: Tab[] = ['revenue', 'utilization', 'profitability', 'outstanding', 'overdue'];
 
   return (
     <div>
@@ -33,6 +33,7 @@ export default function ReportsPage() {
         ))}
       </div>
       {tab === 'revenue' && <RevenueTab />}
+      {tab === 'utilization' && <UtilizationTab />}
       {tab === 'profitability' && <ProfitabilityTab />}
       {tab === 'outstanding' && <OutstandingTab />}
       {tab === 'overdue' && <OverdueTab />}
@@ -73,6 +74,46 @@ function RevenueTab() {
       </div>
       {/* The table is the accessible form of the chart, not an afterthought. */}
       <Table header={[t('reports.period'), t('reports.total')]} rows={points.map((p) => [p.period, <Money key={p.period} value={p.revenue} />])} />
+    </div>
+  );
+}
+
+function UtilizationTab() {
+  const { t } = useTranslation();
+  const to = new Date();
+  const from = new Date(to.getTime() - 30 * 86400000);
+  const query = useQuery({ queryKey: ['report-utilization'], queryFn: () => reportsApi.utilization(from.toISOString(), to.toISOString()) });
+  if (query.isError) return <ErrorState onRetry={() => query.refetch()} />;
+  const rows = query.data?.data ?? [];
+  return (
+    <div className="flex flex-col gap-3">
+      {/* State the definition on the screen, per spec. */}
+      <p className="text-xs text-muted">{t('reports.utilizationNote')}</p>
+      <div className="flex justify-end">
+        <Button variant="secondary" onClick={() => downloadCsv('utilization.csv', ['vehicle', 'rentedDays', 'availableDays', 'utilizationPct'], rows.map((r) => [r.plateNumber, r.rentedDays, r.availableDays, r.utilizationPct]))}>
+          <Download size={16} aria-hidden />
+          {t('reports.export')}
+        </Button>
+      </div>
+      <div style={{ width: '100%', height: 240 }}>
+        <ResponsiveContainer>
+          <BarChart data={rows.map((r) => ({ plate: r.plateNumber, pct: r.utilizationPct }))}>
+            <XAxis dataKey="plate" fontSize={11} />
+            <YAxis fontSize={11} domain={[0, 100]} />
+            <Tooltip />
+            <Bar dataKey="pct" fill="var(--color-accent)" />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+      <Table
+        header={[t('reports.vehicle'), 'Rented days', 'Available days', '%']}
+        rows={rows.map((r) => [
+          <span key="v" className="font-mono">{r.plateNumber}</span>,
+          r.rentedDays,
+          r.availableDays,
+          `${r.utilizationPct}%`,
+        ])}
+      />
     </div>
   );
 }
