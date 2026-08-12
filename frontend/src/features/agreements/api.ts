@@ -12,6 +12,8 @@ import { apiRequest } from '../../lib/apiClient';
 export interface AgreementQuery {
   status?: string;
   branchId?: string;
+  vehicleId?: string;
+  customerId?: string;
   page: number;
   pageSize: number;
 }
@@ -19,7 +21,14 @@ export interface AgreementQuery {
 export const agreementsApi = {
   list: (query: AgreementQuery) =>
     apiRequest<AgreementListItem[]>('/agreements', {
-      query: { status: query.status, branchId: query.branchId, page: query.page, pageSize: query.pageSize },
+      query: {
+        status: query.status,
+        branchId: query.branchId,
+        vehicleId: query.vehicleId,
+        customerId: query.customerId,
+        page: query.page,
+        pageSize: query.pageSize,
+      },
     }),
   get: (id: string) => apiRequest<AgreementDetail>(`/agreements/${id}`),
   checkout: (body: CheckoutRequest) =>

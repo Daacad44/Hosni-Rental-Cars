@@ -7,8 +7,8 @@ import type {
 import { apiRequest } from '../../lib/apiClient';
 
 export const expensesApi = {
-  list: (category: string | undefined, page: number, pageSize: number) =>
-    apiRequest<{ items: ExpenseView[]; sum: string }>('/expenses', { query: { category, page, pageSize } }),
+  list: (category: string | undefined, page: number, pageSize: number, vehicleId?: string) =>
+    apiRequest<{ items: ExpenseView[]; sum: string }>('/expenses', { query: { category, vehicleId, page, pageSize } }),
   create: (body: CreateExpenseRequest) => apiRequest<ExpenseView>('/expenses', { method: 'POST', body }),
   remove: (id: string) => apiRequest<{ success: boolean }>(`/expenses/${id}`, { method: 'DELETE' }),
   listFines: (page: number, pageSize: number) =>

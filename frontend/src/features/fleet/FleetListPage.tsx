@@ -5,6 +5,7 @@ import { Plus, FileWarning } from 'lucide-react';
 import { VEHICLE_STATUSES } from '@hosni/shared';
 import { useVehicles } from './hooks';
 import { useBranches } from '../branches/hooks';
+import { useBranchScope } from '../../app/BranchScope';
 import { VehicleStatusBadge } from './VehicleStatusBadge';
 import { Button } from '../../components/ui/Button';
 import { SelectField } from '../../components/ui/SelectField';
@@ -17,6 +18,7 @@ export default function FleetListPage() {
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
   const branches = useBranches();
+  const { branchId: scopeBranch } = useBranchScope();
 
   // Filters live in the URL so a view can be linked and shared.
   const q = params.get('q') ?? '';
@@ -24,17 +26,19 @@ export default function FleetListPage() {
   const branchId = params.get('branchId') ?? '';
   const docsExpiring = params.get('docsExpiring') === '1';
   const page = Number(params.get('page') ?? '1');
+  // The topbar branch switcher sets the default; an explicit filter overrides it.
+  const effectiveBranch = branchId || scopeBranch || '';
 
   const query = useMemo(
     () => ({
       q: q || undefined,
       status: status || undefined,
-      branchId: branchId || undefined,
+      branchId: effectiveBranch || undefined,
       docsExpiringDays: docsExpiring ? 30 : undefined,
       page,
       pageSize: PAGE_SIZE,
     }),
-    [q, status, branchId, docsExpiring, page],
+    [q, status, effectiveBranch, docsExpiring, page],
   );
 
   const vehiclesQuery = useVehicles(query);

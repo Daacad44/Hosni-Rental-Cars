@@ -56,6 +56,22 @@ Seed logins (password `ChangeMe123!`): `owner@hosni.test`, `manager@hosni.test`,
 npm run typecheck && npm run lint && npm run test && npm run build
 ```
 
+## Production deploy (single VPS)
+
+Application images: `backend/Dockerfile` (runs the API by default, the worker via
+a command override) and `frontend/Dockerfile` (Vite build served by nginx, which
+also reverse-proxies `/api` to the API so the SPA and API share one origin).
+
+```bash
+cp .env.example .env        # fill DATABASE_URL, JWT secrets, S3, CORS_ORIGIN…
+docker compose -f docker-compose.prod.yml up -d --build
+```
+
+The stack is postgres + redis + a one-shot `migrate` (runs `prisma migrate
+deploy`) + `api` + `worker` + `web` (nginx). Rate limiting uses a Redis store in
+production so counters are correct across multiple API instances; in dev/test it
+falls back to in-memory, so no Redis is needed to run the suite.
+
 ## Progress
 
 - **Module 1 — Authentication & staff accounts:** ✅ login/refresh/logout/me,

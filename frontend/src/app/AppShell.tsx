@@ -5,6 +5,7 @@ import { LogOut, Menu, X } from 'lucide-react';
 import type { AuthUser } from '@hosni/shared';
 import { Sidebar } from './Sidebar';
 import { LanguageToggle } from './LanguageToggle';
+import { TopbarSearch, BranchSwitcher } from './TopbarSearch';
 import { useLogout } from '../features/auth/hooks';
 import { Button } from '../components/ui/Button';
 import { cn } from '../lib/cn';
@@ -45,15 +46,12 @@ export function AppShell({ user }: { user: AuthUser }) {
             >
               {mobileOpen ? <X size={20} /> : <Menu size={20} />}
             </button>
-            <span className="text-sm font-medium text-muted">{user.organization.name}</span>
-            {user.branch && (
-              <span className="rounded-sm bg-surface-alt px-2 py-0.5 text-xs text-foreground">
-                {user.branch.name}
-              </span>
-            )}
+            <span className="hidden text-sm font-medium text-muted lg:block">{user.organization.name}</span>
+            <TopbarSearch />
           </div>
 
           <div className="flex items-center gap-3">
+            <BranchSwitcher role={user.role} />
             <div className="hidden sm:block">
               <span className="text-sm font-medium text-foreground">{user.name}</span>
               <span className="ms-2 text-xs text-muted">{t(`roles.${user.role}`)}</span>

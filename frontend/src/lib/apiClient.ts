@@ -43,7 +43,9 @@ async function refreshSession(): Promise<void> {
  * call a feature api.ts, which calls this. Nothing else touches `fetch`.
  */
 export async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<ApiSuccess<T>> {
-  const url = new URL(`${BASE_URL}${path}`);
+  // A base is supplied so a relative BASE_URL (e.g. "/api/v1" behind nginx)
+  // resolves against the current origin; an absolute BASE_URL ignores it.
+  const url = new URL(`${BASE_URL}${path}`, window.location.origin);
   if (options.query) {
     for (const [key, value] of Object.entries(options.query)) {
       if (value !== undefined) url.searchParams.set(key, String(value));
