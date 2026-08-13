@@ -73,3 +73,77 @@ jobs:
 
       - name: Build
         run: npm run build
+
+  # Builds and smoke-tests the actual deployment artifact — the Docker images.
+  # Runs in parallel with build-and-test so fast feedback stays fast. Every
+  # check here maps to a production failure that shipped green through the
+  # application-level job above, because none of them touch the images.
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      # Both images build from the repo root: the shared workspace and the
+      # lockfile live there. A missing root file (see TS5083) only ever shows
+      # up here, never in `npm run build`.
+      - name: Build API image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: backend/Dockerfile
+          load: true
+          tags: hosni-api:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: Build web image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: frontend/Dockerfile
+          load: true
+          tags: hosni-web:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      # The runtime image must carry the Prisma CLI: `npm prune --omit=dev`
+      # has silently stripped it before, turning every deploy's migration step
+      # into an unpinned network download.
+      - name: API image ships the Prisma CLI
+        run: docker run --rm hosni-api:ci npx prisma --version
+      # envsubst must produce a valid config, and must NOT eat nginx's own
+      # $host/$uri. A broken template means nginx refuses to boot and the whole
+      # site 502s.
+      - name: nginx config is valid with the default upstream
+        run: docker run --rm hosni-web:ci nginx -t
+      # The nginx entrypoint only runs its envsubst init when the command starts
+      # with `nginx`, so render the template explicitly before inspecting it.
+      - name: nginx honours API_UPSTREAM and preserves $host
+        run: |
+          docker run --rm -e API_UPSTREAM=some-host:4000 hosni-web:ci sh -c '
+            /docker-entrypoint.d/20-envsubst-on-templates.sh &&
+            nginx -t &&
+            grep -q "proxy_pass http://\$api_upstream;" /etc/nginx/conf.d/default.conf &&
+            grep -q "set \$api_upstream some-host:4000;" /etc/nginx/conf.d/default.conf &&
+            grep -q "proxy_set_header Host \$host;" /etc/nginx/conf.d/default.conf
+          '
+      # nginx must survive an upstream that does not exist — the SPA is static
+      # and has no business going down with the API.
+      - name: web container starts with an unresolvable upstream
+        run: |
+          docker run -d --name web-ci -e API_UPSTREAM=nope-does-not-exist:4000 hosni-web:ci
+          sleep 5
+          test "$(docker inspect -f '{{.State.Running}}' web-ci)" = "true" \
+            || { docker logs web-ci; exit 1; }
+          docker rm -f web-ci
+      # The compose files must stay parseable and must not drift out of sync
+      # with the Dockerfiles they reference.
+      - name: Compose files are valid
+        run: |
+          docker compose -f docker-compose.prod.yml config -q
+          docker compose -f docker-compose.coolify.yml config -q
+        env:
+          POSTGRES_PASSWORD: ci
+          DATABASE_URL: postgresql://postgres:ci@postgres:5432/hosni
+          REDIS_URL: redis://redis:6379
+          JWT_ACCESS_SECRET: ci-secret-that-is-at-least-32-characters
+          JWT_REFRESH_SECRET: ci-other-secret-at-least-32-characters
+          CORS_ORIGIN: https://example.test

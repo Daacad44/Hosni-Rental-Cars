@@ -14,7 +14,18 @@ server {
   location /api/ {
     # Compose keeps the default (api:4000, the compose service name); Coolify
     # overrides API_UPSTREAM with the API application's internal hostname.
-    proxy_pass http://${API_UPSTREAM};
+    #
+    # The upstream is routed through a variable ON PURPOSE — do not inline it
+    # back to a literal hostname. A literal upstream is resolved once, at
+    # startup, and an unresolvable name is a fatal error: nginx exits and the
+    # whole static SPA 502s just because the API is slow to boot. With a
+    # variable, nginx defers resolution to Docker's embedded DNS (127.0.0.11)
+    # on each request, so the SPA serves and only /api/ fails when the API is
+    # down. proxy_pass carries no URI component, so the original request URI is
+    # forwarded unchanged — routing is identical, only the timing differs.
+    resolver 127.0.0.11 valid=10s ipv6=off;
+    set $api_upstream ${API_UPSTREAM};
+    proxy_pass http://$api_upstream;
     proxy_http_version 1.1;
     proxy_set_header Host $host;
     proxy_set_header X-Real-IP $remote_addr;

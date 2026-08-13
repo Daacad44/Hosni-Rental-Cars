@@ -1,0 +1,101 @@
+# Coolify deployment stack.
+#
+# Unlike docker-compose.prod.yml this file brings NO postgres and NO redis:
+# on Coolify those are managed resources that already exist, and a second pair
+# would just waste memory and confuse which database is authoritative. The app
+# reaches the managed datastores over Coolify's predefined network.
+#
+# Coolify settings that cannot be expressed in compose — set these in the UI:
+#   - Build Pack:              Docker Compose
+#   - Compose file location:   docker-compose.coolify.yml
+#   - Connect To Predefined Network: ON
+#       This is what puts these services on the same network as the managed
+#       Postgres and Redis. With it OFF every DB/Redis connection fails.
+#   - Environment variables (all runtime-only, set in the Coolify UI):
+#       DATABASE_URL        connection string for the managed Postgres
+#       REDIS_URL           connection string for the managed Redis
+#       JWT_ACCESS_SECRET   >= 32 chars
+#       JWT_REFRESH_SECRET  >= 32 chars
+#       CORS_ORIGIN         the site's public origin, e.g. https://app.example.com
+#       STORAGE_DRIVER, S3_BUCKET, S3_REGION, S3_ENDPOINT,
+#       S3_ACCESS_KEY_ID, S3_SECRET_ACCESS_KEY   (object storage for uploads)
+#
+# Why `web` reverse-proxies /api/ instead of the SPA calling the API on its own
+# domain: the refresh cookie is httpOnly + sameSite='lax' (backend/src/utils/
+# cookies.ts). A split origin (spa.example.com vs api.example.com) produces the
+# nastiest possible bug — login appears to succeed, the browser silently drops
+# the cross-site refresh cookie, and the session dies at fifteen minutes with no
+# error anyone can trace. Same origin keeps the cookie flowing.
+services:
+  # Applies pending migrations once, then exits. api/worker gate on it so a
+  # failed migration stops the rollout instead of half-applying the schema.
+  migrate:
+    build: { context: ., dockerfile: backend/Dockerfile }
+    command: ['npx', 'prisma', 'migrate', 'deploy']
+    working_dir: /app/backend
+    restart: 'no'
+    environment:
+      DATABASE_URL: ${DATABASE_URL:?set DATABASE_URL to the managed Postgres URL}
+
+  api:
+    build: { context: ., dockerfile: backend/Dockerfile }
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 4000
+      DATABASE_URL: ${DATABASE_URL:?set DATABASE_URL to the managed Postgres URL}
+      REDIS_URL: ${REDIS_URL:?set REDIS_URL to the managed Redis URL}
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:?set JWT_ACCESS_SECRET}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:?set JWT_REFRESH_SECRET}
+      CORS_ORIGIN: ${CORS_ORIGIN}
+      # Traefik AND nginx sit in front of the API, so express must skip two
+      # proxy hops. With 1 it trusts only Traefik and attributes every request
+      # to nginx's single IP, collapsing per-user rate limiting into one bucket.
+      TRUST_PROXY_HOPS: 2
+      STORAGE_DRIVER: ${STORAGE_DRIVER:-s3}
+      S3_BUCKET: ${S3_BUCKET}
+      S3_REGION: ${S3_REGION}
+      S3_ENDPOINT: ${S3_ENDPOINT}
+      S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID}
+      S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY}
+    volumes:
+      - uploads:/app/backend/uploads
+    healthcheck:
+      test: ['CMD', 'wget', '-qO-', 'http://127.0.0.1:4000/api/v1/health']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+
+  worker:
+    build: { context: ., dockerfile: backend/Dockerfile }
+    restart: unless-stopped
+    command: ['node', 'dist/worker.js']
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: ${DATABASE_URL:?set DATABASE_URL to the managed Postgres URL}
+      REDIS_URL: ${REDIS_URL:?set REDIS_URL to the managed Redis URL}
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:?set JWT_ACCESS_SECRET}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:?set JWT_REFRESH_SECRET}
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+
+  # The only service with a domain. Serves the static SPA and reverse-proxies
+  # /api/ to the api service on the internal network (same origin, see above).
+  web:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+      args:
+        VITE_API_BASE_URL: /api/v1
+    restart: unless-stopped
+    environment:
+      # nginx resolves this per-request via Docker DNS; the api service name.
+      API_UPSTREAM: api:4000
+      # Tells Coolify to route this service's port 80 through Traefik at "/"
+      # and issue a certificate for it.
+      SERVICE_FQDN_WEB_80: /
+
+volumes:
+  uploads:
