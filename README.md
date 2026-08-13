@@ -56,11 +56,62 @@ Seed logins (password `ChangeMe123!`): `owner@hosni.test`, `manager@hosni.test`,
 npm run typecheck && npm run lint && npm run test && npm run build
 ```
 
-## Production deploy (single VPS)
+## Production deploy
 
-Application images: `backend/Dockerfile` (runs the API by default, the worker via
-a command override) and `frontend/Dockerfile` (Vite build served by nginx, which
-also reverse-proxies `/api` to the API so the SPA and API share one origin).
+The SPA and the API are served on **separate domains**. The frontend image is
+plain static nginx with no reverse proxy — it has no upstream and therefore
+cannot crash-loop when the API is missing. The SPA reaches the API by its own
+absolute origin, baked into the bundle at build time via `VITE_API_BASE_URL`.
+
+### Coolify (production)
+
+Two applications from this one repo, plus a worker, each built with the **repo
+root** as the build context:
+
+| | Application | Dockerfile | Port | Domain |
+|---|---|---|---|---|
+| API | `Backend-Hosni` | `/backend/Dockerfile` | 4000 | `https://api.hosni.botandev.com` |
+| SPA | `hosni-rental-frontend` | `/frontend/Dockerfile` | 80 | `https://hosni.botandev.com` |
+
+Plus a **worker** application: the same image as the API, **Start Command:**
+`node dist/worker.js`, with no port, no domain and no healthcheck.
+
+`hosni.botandev.com` and `api.hosni.botandev.com` share the registrable domain
+`botandev.com`, so they are same-site. The refresh cookie (`httpOnly`,
+`secure`, `sameSite=lax`) is host-only on the API domain and flows on the
+same-site requests the SPA makes — do **not** set `COOKIE_DOMAIN`.
+
+Environment variables:
+
+```
+# API — runtime-only, every one of them
+NODE_ENV=production
+PORT=4000
+DATABASE_URL=…                            # managed Postgres, internal hostname
+REDIS_URL=…                               # managed Redis, internal hostname
+JWT_ACCESS_SECRET=…                       # >= 32 chars
+JWT_REFRESH_SECRET=…                      # >= 32 chars
+CORS_ORIGIN=https://hosni.botandev.com    # the SPA's origin, not the API's
+TRUST_PROXY_HOPS=1                        # Traefik only, now that nginx is gone
+STORAGE_DRIVER=local
+UPLOAD_DIR=/app/backend/uploads           # requires a persistent volume
+
+# SPA
+VITE_API_BASE_URL=https://api.hosni.botandev.com/api/v1   # BUILD-TIME
+```
+
+Three things that have each already cost a deploy:
+
+- **`VITE_API_BASE_URL` must be a build-time variable.** Vite bakes it into the
+  bundle; set as a runtime variable it never reaches the browser and the SPA
+  silently falls back to calling `localhost:4000`.
+- **Everything else must be runtime-only.** Coolify turns build-time variables
+  into `ARG`s, baking secrets into image layers that `docker history` reads
+  back.
+- **Migrations run per rollout** as a pre-deployment command on the API app:
+  `cd /app/backend && npx prisma migrate deploy`.
+
+### Local production testing
 
 ```bash
 cp .env.example .env        # fill DATABASE_URL, JWT secrets, S3, CORS_ORIGIN…
@@ -68,9 +119,12 @@ docker compose -f docker-compose.prod.yml up -d --build
 ```
 
 The stack is postgres + redis + a one-shot `migrate` (runs `prisma migrate
-deploy`) + `api` + `worker` + `web` (nginx). Rate limiting uses a Redis store in
-production so counters are correct across multiple API instances; in dev/test it
-falls back to in-memory, so no Redis is needed to run the suite.
+deploy`) + `api` + `worker` + `web` (nginx). The `api` service publishes port
+4000 and `web` is built with `VITE_API_BASE_URL=http://localhost:4000/api/v1`;
+`localhost:80` and `localhost:4000` are same-site, so cookies behave locally as
+they do in production. Rate limiting uses a Redis store in production so
+counters are correct across multiple API instances; in dev/test it falls back
+to in-memory, so no Redis is needed to run the suite.
 
 ## Progress
 

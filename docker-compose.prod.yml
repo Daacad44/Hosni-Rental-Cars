@@ -36,6 +36,10 @@ services:
   api:
     build: { context: ., dockerfile: backend/Dockerfile }
     restart: unless-stopped
+    # Published on its own origin now that nginx no longer proxies /api. The SPA
+    # (served on localhost:80) calls the API on localhost:4000 directly.
+    ports:
+      - '4000:4000'
     environment:
       NODE_ENV: production
       PORT: 4000
@@ -43,7 +47,8 @@ services:
       REDIS_URL: ${REDIS_URL:-redis://redis:6379}
       JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:?set JWT_ACCESS_SECRET}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:?set JWT_REFRESH_SECRET}
-      CORS_ORIGIN: ${CORS_ORIGIN}
+      # Where the SPA is served; defaults to match the web service below.
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost}
       TRUST_PROXY_HOPS: ${TRUST_PROXY_HOPS:-1}
       STORAGE_DRIVER: ${STORAGE_DRIVER:-s3}
       S3_BUCKET: ${S3_BUCKET}
@@ -74,12 +79,13 @@ services:
       context: .
       dockerfile: frontend/Dockerfile
       args:
-        VITE_API_BASE_URL: /api/v1
+        # Absolute URL to the API's published port. localhost:80 (web) and
+        # localhost:4000 (api) are same-site, so the httpOnly/sameSite=lax
+        # refresh cookie flows here exactly as it does across subdomains in prod.
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:4000/api/v1}
     restart: unless-stopped
     ports:
       - '80:80'
-    depends_on:
-      - api
 
 volumes:
   pgdata:
