@@ -73,3 +73,63 @@ jobs:
 
       - name: Build
         run: npm run build
+
+  # Builds and smoke-tests the deployment artifact — the Docker images — in
+  # parallel with build-and-test. The frontend crash-loop lived in the gap
+  # between `npm run build` and `docker build`, which nothing else covers.
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      # Both images build from the repo root: the shared workspace and the
+      # lockfile live there.
+      - name: Build API image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: backend/Dockerfile
+          load: true
+          tags: hosni-api:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: Build web image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: frontend/Dockerfile
+          load: true
+          tags: hosni-web:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: nginx config is valid
+        run: docker run --rm hosni-web:ci nginx -t
+      # The guard that keeps the deleted design deleted: the static image must
+      # contain no reverse proxy. A reintroduced proxy_pass fails the build.
+      - name: web image has no /api proxy
+        run: |
+          count=$(docker run --rm hosni-web:ci grep -c proxy_pass /etc/nginx/conf.d/default.conf || true)
+          echo "proxy_pass occurrences: $count"
+          test "$count" = "0"
+      # The exact production symptom, reproduced: the SPA must serve with no API
+      # in existence and no upstream to resolve.
+      - name: web container serves with no API anywhere
+        run: |
+          docker run -d --name web-ci -p 8088:80 hosni-web:ci
+          sleep 5
+          test "$(docker inspect -f '{{.State.Running}}' web-ci)" = "true" \
+            || { docker logs web-ci; exit 1; }
+          code=$(curl -sf -o /dev/null -w '%{http_code}' http://localhost:8088/) \
+            || { docker logs web-ci; exit 1; }
+          echo "GET / -> $code"
+          test "$code" = "200"
+          docker rm -f web-ci
+      - name: Compose file is valid
+        run: docker compose -f docker-compose.prod.yml config -q
+        env:
+          POSTGRES_PASSWORD: ci
+          DATABASE_URL: postgresql://postgres:ci@postgres:5432/hosni
+          REDIS_URL: redis://redis:6379
+          JWT_ACCESS_SECRET: ci-secret-that-is-at-least-32-characters
+          JWT_REFRESH_SECRET: ci-other-secret-at-least-32-characters
+          CORS_ORIGIN: http://localhost
