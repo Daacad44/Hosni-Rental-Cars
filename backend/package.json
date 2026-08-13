@@ -36,6 +36,7 @@
     "pdfkit": "^0.15.2",
     "pino": "^9.3.2",
     "pino-http": "^10.2.0",
+    "prisma": "^5.18.0",
     "rate-limit-redis": "^4.2.0",
     "zod": "^3.23.8"
   },
@@ -52,7 +53,6 @@
     "@types/supertest": "^6.0.3",
     "eslint": "^9.39.5",
     "pino-pretty": "^11.2.2",
-    "prisma": "^5.18.0",
     "supertest": "^7.2.2",
     "tsx": "^4.17.0",
     "typescript": "^5.5.4",
